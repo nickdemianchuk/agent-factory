@@ -17,7 +17,7 @@ jobs:
     uses: nickdemianchuk/actions/.github/workflows/lint-commits.yml@main
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-go@v7.0.0
