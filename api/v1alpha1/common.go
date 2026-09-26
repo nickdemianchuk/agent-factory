@@ -1,14 +1,19 @@
 package v1alpha1
 
+// SessionIDLabel is set on every resource of a session.
 const SessionIDLabel = "agentfactory.io/session-id"
 
+// Finalizer guards cleanup on agent resources.
 const Finalizer = "agentfactory.io/finalizer"
 
+// ConditionReady is the condition type for readiness.
 const ConditionReady = "Ready"
 
+// Phase is the lifecycle phase of an agent resource.
 // +kubebuilder:validation:Enum=Pending;Provisioning;Ready;Completed;Terminating;Failed
 type Phase string
 
+// Lifecycle phases.
 const (
 	PhasePending      Phase = "Pending"
 	PhaseProvisioning Phase = "Provisioning"
@@ -18,8 +23,11 @@ const (
 	PhaseFailed       Phase = "Failed"
 )
 
+// BoxName returns the AgentBox and namespace name for a session.
 func BoxName(sessionID string) string { return "box-" + sessionID }
 
+// WorkspaceName returns the AgentWorkspace and PVC name for a session.
 func WorkspaceName(sessionID string) string { return "workspace-" + sessionID }
 
+// WorkerName returns the AgentWorker and Pod name for a session.
 func WorkerName(sessionID string) string { return "worker-" + sessionID }

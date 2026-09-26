@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Desired state of an AgentWorkspace.
+// AgentWorkspaceSpec is the desired state of an AgentWorkspace.
 type AgentWorkspaceSpec struct {
 	// Fixed session UUID shared by all resources in the box.
 	// +required
@@ -30,7 +30,7 @@ type AgentWorkspaceSpec struct {
 	AccessModes []corev1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
 }
 
-// Observed state of an AgentWorkspace.
+// AgentWorkspaceStatus is the observed state of an AgentWorkspace.
 type AgentWorkspaceStatus struct {
 	// Lifecycle phase.
 	// +optional
@@ -59,7 +59,7 @@ type AgentWorkspaceStatus struct {
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// Agent filesystem; child of an AgentBox.
+// AgentWorkspace is an agent filesystem, child of an AgentBox.
 type AgentWorkspace struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -72,6 +72,7 @@ type AgentWorkspace struct {
 
 // +kubebuilder:object:root=true
 
+// AgentWorkspaceList is a list of AgentWorkspaces.
 type AgentWorkspaceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitzero"`

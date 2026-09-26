@@ -1,3 +1,4 @@
+// Package v1alpha1 defines the agentfactory.io/v1alpha1 API.
 // +kubebuilder:object:generate=true
 // +groupName=agentfactory.io
 package v1alpha1
@@ -9,10 +10,13 @@ import (
 )
 
 var (
+	// GroupVersion is the API group and version.
 	GroupVersion = schema.GroupVersion{Group: "agentfactory.io", Version: "v1alpha1"}
 
+	// SchemeBuilder registers the API types.
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 
+	// AddToScheme adds the API types to a scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
 )
 

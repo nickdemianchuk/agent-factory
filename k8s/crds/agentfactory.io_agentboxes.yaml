@@ -32,7 +32,8 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Isolated agent runtime; parent of all other agent resources.
+        description: AgentBox is an isolated agent runtime, parent of all other agent
+          resources.
         properties:
           apiVersion:
             description: |-
@@ -52,7 +53,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Desired state of an AgentBox.
+            description: AgentBoxSpec is the desired state of an AgentBox.
             properties:
               agentSessionID:
                 description: Fixed session UUID shared by all resources in the box.
@@ -116,7 +117,7 @@ spec:
             - agentSessionID
             type: object
           status:
-            description: Observed state of an AgentBox.
+            description: AgentBoxStatus is the observed state of an AgentBox.
             properties:
               conditions:
                 description: Latest observations.

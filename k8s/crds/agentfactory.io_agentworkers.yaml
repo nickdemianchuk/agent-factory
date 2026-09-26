@@ -32,7 +32,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Agent worker Pod; child of an AgentBox.
+        description: AgentWorker is an agent worker Pod, child of an AgentBox.
         properties:
           apiVersion:
             description: |-
@@ -52,7 +52,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Desired state of an AgentWorker.
+            description: AgentWorkerSpec is the desired state of an AgentWorker.
             properties:
               agentSessionID:
                 description: Fixed session UUID shared by all resources in the box.
@@ -307,7 +307,7 @@ spec:
             - image
             type: object
           status:
-            description: Observed state of an AgentWorker.
+            description: AgentWorkerStatus is the observed state of an AgentWorker.
             properties:
               conditions:
                 description: Latest observations.

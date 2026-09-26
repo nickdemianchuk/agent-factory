@@ -32,7 +32,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Agent filesystem; child of an AgentBox.
+        description: AgentWorkspace is an agent filesystem, child of an AgentBox.
         properties:
           apiVersion:
             description: |-
@@ -52,7 +52,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Desired state of an AgentWorkspace.
+            description: AgentWorkspaceSpec is the desired state of an AgentWorkspace.
             properties:
               accessModes:
                 description: Volume access modes; defaults to ReadWriteOnce.
@@ -88,7 +88,7 @@ spec:
             - size
             type: object
           status:
-            description: Observed state of an AgentWorkspace.
+            description: AgentWorkspaceStatus is the observed state of an AgentWorkspace.
             properties:
               claimName:
                 description: Backing PVC name.

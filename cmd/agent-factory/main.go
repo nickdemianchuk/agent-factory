@@ -1,3 +1,4 @@
+// Command agent-factory runs the agent resource controllers.
 package main
 
 import (

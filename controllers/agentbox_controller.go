@@ -1,3 +1,4 @@
+// Package controllers reconciles the agentfactory.io resources.
 package controllers
 
 import (
@@ -17,11 +18,13 @@ import (
 	agentv1 "github.com/nickdemianchuk/agent-factory/api/v1alpha1"
 )
 
+// BoxServiceAccount and BoxRole name the service account and role of every box.
 const (
 	BoxServiceAccount = "agent"
 	BoxRole           = "agent"
 )
 
+// AgentBoxReconciler provisions the namespace and RBAC of an AgentBox.
 type AgentBoxReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -35,6 +38,7 @@ type AgentBoxReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=escalate;bind
 
+// Reconcile drives an AgentBox to its desired state.
 func (r *AgentBoxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -134,6 +138,7 @@ func mergeLabels(dst, src map[string]string) map[string]string {
 	return dst
 }
 
+// SetupWithManager registers the reconciler with mgr.
 func (r *AgentBoxReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&agentv1.AgentBox{}).

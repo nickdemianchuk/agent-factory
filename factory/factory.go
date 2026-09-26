@@ -1,3 +1,4 @@
+// Package factory creates and manages agent sessions: a box, its workspace and its worker.
 package factory
 
 import (
@@ -16,13 +17,16 @@ import (
 	agentv1 "github.com/nickdemianchuk/agent-factory/api/v1alpha1"
 )
 
+// Defaults for waiting on readiness.
 const (
 	DefaultReadyTimeout = 2 * time.Minute
 	DefaultPollInterval = time.Second
 )
 
+// ErrNotFound is returned when a session does not exist.
 var ErrNotFound = errors.New("agent session not found")
 
+// Factory manages agent sessions.
 type Factory struct {
 	client client.Client
 
@@ -30,12 +34,15 @@ type Factory struct {
 	PollInterval time.Duration
 }
 
+// New returns a Factory backed by c.
 func New(c client.Client) *Factory {
 	return &Factory{client: c, ReadyTimeout: DefaultReadyTimeout, PollInterval: DefaultPollInterval}
 }
 
+// NewSessionID returns a new session ID.
 func NewSessionID() string { return string(uuid.NewUUID()) }
 
+// Session is a box and its children.
 type Session struct {
 	ID        string
 	Box       *agentv1.AgentBox
@@ -43,7 +50,7 @@ type Session struct {
 	Worker    *agentv1.AgentWorker
 }
 
-// Create overwrites the session ID in each part.
+// Spec describes a session; Create overwrites the session ID in each part.
 type Spec struct {
 	Box       agentv1.AgentBoxSpec
 	Workspace agentv1.AgentWorkspaceSpec
@@ -124,6 +131,7 @@ func (f *Factory) Get(ctx context.Context, sessionID string) (*Session, error) {
 	return s, nil
 }
 
+// List returns all sessions.
 func (f *Factory) List(ctx context.Context) ([]*Session, error) {
 	var boxes agentv1.AgentBoxList
 	if err := f.client.List(ctx, &boxes); err != nil {
@@ -143,11 +151,13 @@ func (f *Factory) List(ctx context.Context) ([]*Session, error) {
 	return sessions, nil
 }
 
+// UpdateBox mutates the box spec.
 func (f *Factory) UpdateBox(ctx context.Context, sessionID string, mutate func(*agentv1.AgentBoxSpec)) error {
 	return f.update(ctx, &agentv1.AgentBox{}, client.ObjectKey{Name: agentv1.BoxName(sessionID)},
 		func(o client.Object) { mutate(&o.(*agentv1.AgentBox).Spec) })
 }
 
+// UpdateWorkspace mutates the workspace spec.
 func (f *Factory) UpdateWorkspace(
 	ctx context.Context, sessionID string, mutate func(*agentv1.AgentWorkspaceSpec),
 ) error {
@@ -159,6 +169,7 @@ func (f *Factory) UpdateWorkspace(
 		func(o client.Object) { mutate(&o.(*agentv1.AgentWorkspace).Spec) })
 }
 
+// UpdateWorker mutates the worker spec.
 func (f *Factory) UpdateWorker(ctx context.Context, sessionID string, mutate func(*agentv1.AgentWorkerSpec)) error {
 	key, err := f.childKey(ctx, sessionID, agentv1.WorkerName(sessionID))
 	if err != nil {
@@ -168,6 +179,7 @@ func (f *Factory) UpdateWorker(ctx context.Context, sessionID string, mutate fun
 		func(o client.Object) { mutate(&o.(*agentv1.AgentWorker).Spec) })
 }
 
+// Delete removes a session and, with its box, every child.
 func (f *Factory) Delete(ctx context.Context, sessionID string) error {
 	box := &agentv1.AgentBox{ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(sessionID)}}
 	if err := f.client.Delete(ctx, box); err != nil {

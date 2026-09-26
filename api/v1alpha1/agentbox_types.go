@@ -5,7 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Desired state of an AgentBox.
+// AgentBoxSpec is the desired state of an AgentBox.
 type AgentBoxSpec struct {
 	// Fixed session UUID shared by all resources in the box.
 	// +required
@@ -19,7 +19,7 @@ type AgentBoxSpec struct {
 	Rules []rbacv1.PolicyRule `json:"rules,omitempty"`
 }
 
-// Observed state of an AgentBox.
+// AgentBoxStatus is the observed state of an AgentBox.
 type AgentBoxStatus struct {
 	// Lifecycle phase.
 	// +optional
@@ -52,7 +52,7 @@ type AgentBoxStatus struct {
 // +kubebuilder:printcolumn:name="Namespace",type=string,JSONPath=`.status.namespace`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// Isolated agent runtime; parent of all other agent resources.
+// AgentBox is an isolated agent runtime, parent of all other agent resources.
 type AgentBox struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -65,6 +65,7 @@ type AgentBox struct {
 
 // +kubebuilder:object:root=true
 
+// AgentBoxList is a list of AgentBoxes.
 type AgentBoxList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitzero"`

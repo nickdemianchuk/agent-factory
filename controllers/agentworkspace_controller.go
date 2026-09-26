@@ -17,6 +17,7 @@ import (
 
 const requeueWaiting = 2 * time.Second
 
+// AgentWorkspaceReconciler provisions the PVC of an AgentWorkspace.
 type AgentWorkspaceReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -27,6 +28,7 @@ type AgentWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups=agentfactory.io,resources=agentworkspaces/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 
+// Reconcile drives an AgentWorkspace to its desired state.
 func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -104,6 +106,7 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, r.Status().Patch(ctx, &ws, client.MergeFrom(base))
 }
 
+// SetupWithManager registers the reconciler with mgr.
 func (r *AgentWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&agentv1.AgentWorkspace{}).
