@@ -32,6 +32,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: Agent filesystem; child of an AgentBox.
         properties:
           apiVersion:
             description: |-
@@ -51,9 +52,10 @@ spec:
           metadata:
             type: object
           spec:
+            description: Desired state of an AgentWorkspace.
             properties:
               accessModes:
-                description: Defaults to ReadWriteOnce.
+                description: Volume access modes; defaults to ReadWriteOnce.
                 items:
                   type: string
                 type: array
@@ -62,6 +64,7 @@ spec:
                 - message: accessModes is immutable
                   rule: self == oldSelf
               agentSessionID:
+                description: Fixed session UUID shared by all resources in the box.
                 pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
                 type: string
                 x-kubernetes-validations:
@@ -71,10 +74,11 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Can only grow.
+                description: Requested capacity; can only grow.
                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                 x-kubernetes-int-or-string: true
               storageClassName:
+                description: Storage class of the volume.
                 type: string
                 x-kubernetes-validations:
                 - message: storageClassName is immutable
@@ -84,10 +88,13 @@ spec:
             - size
             type: object
           status:
+            description: Observed state of an AgentWorkspace.
             properties:
               claimName:
+                description: Backing PVC name.
                 type: string
               conditions:
+                description: Latest observations.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -147,9 +154,11 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               observedGeneration:
+                description: Last reconciled generation.
                 format: int64
                 type: integer
               phase:
+                description: Lifecycle phase.
                 enum:
                 - Pending
                 - Provisioning

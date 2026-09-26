@@ -32,6 +32,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: Agent worker Pod; child of an AgentBox.
         properties:
           apiVersion:
             description: |-
@@ -51,24 +52,29 @@ spec:
           metadata:
             type: object
           spec:
+            description: Desired state of an AgentWorker.
             properties:
               agentSessionID:
+                description: Fixed session UUID shared by all resources in the box.
                 pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
                 type: string
                 x-kubernetes-validations:
                 - message: agentSessionID is immutable
                   rule: self == oldSelf
               args:
+                description: Entrypoint arguments.
                 items:
                   type: string
                 type: array
                 x-kubernetes-list-type: atomic
               command:
+                description: Overrides the image entrypoint.
                 items:
                   type: string
                 type: array
                 x-kubernetes-list-type: atomic
               env:
+                description: Environment variables.
                 items:
                   description: EnvVar represents an environment variable present in
                     a Container.
@@ -230,10 +236,11 @@ spec:
                 - name
                 x-kubernetes-list-type: map
               image:
+                description: Container image.
                 minLength: 1
                 type: string
               resources:
-                description: ResourceRequirements describes the compute resource requirements.
+                description: Compute resources.
                 properties:
                   claims:
                     description: |-
@@ -293,14 +300,17 @@ spec:
                 type: object
               workspaceMountPath:
                 default: /workspace
+                description: Workspace mount path.
                 type: string
             required:
             - agentSessionID
             - image
             type: object
           status:
+            description: Observed state of an AgentWorker.
             properties:
               conditions:
+                description: Latest observations.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -360,9 +370,11 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               observedGeneration:
+                description: Last reconciled generation.
                 format: int64
                 type: integer
               phase:
+                description: Lifecycle phase.
                 enum:
                 - Pending
                 - Provisioning
@@ -372,6 +384,7 @@ spec:
                 - Failed
                 type: string
               podName:
+                description: Worker Pod name.
                 type: string
             type: object
         required:

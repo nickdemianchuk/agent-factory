@@ -6,37 +6,45 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Desired state of an AgentWorkspace.
 type AgentWorkspaceSpec struct {
+	// Fixed session UUID shared by all resources in the box.
 	// +required
 	// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="agentSessionID is immutable"
 	AgentSessionID string `json:"agentSessionID"`
 
-	// Can only grow.
+	// Requested capacity; can only grow.
 	// +required
 	Size resource.Quantity `json:"size"`
 
+	// Storage class of the volume.
 	// +optional
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="storageClassName is immutable"
 	StorageClassName *string `json:"storageClassName,omitempty"`
 
-	// Defaults to ReadWriteOnce.
+	// Volume access modes; defaults to ReadWriteOnce.
 	// +optional
 	// +listType=set
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="accessModes is immutable"
 	AccessModes []corev1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
 }
 
+// Observed state of an AgentWorkspace.
 type AgentWorkspaceStatus struct {
+	// Lifecycle phase.
 	// +optional
 	Phase Phase `json:"phase,omitempty"`
 
+	// Backing PVC name.
 	// +optional
 	ClaimName string `json:"claimName,omitempty"`
 
+	// Last reconciled generation.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
+	// Latest observations.
 	// +optional
 	// +listType=map
 	// +listMapKey=type
@@ -51,6 +59,7 @@ type AgentWorkspaceStatus struct {
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
+// Agent filesystem; child of an AgentBox.
 type AgentWorkspace struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`

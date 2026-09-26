@@ -32,6 +32,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
+        description: Isolated agent runtime; parent of all other agent resources.
         properties:
           apiVersion:
             description: |-
@@ -51,8 +52,10 @@ spec:
           metadata:
             type: object
           spec:
+            description: Desired state of an AgentBox.
             properties:
               agentSessionID:
+                description: Fixed session UUID shared by all resources in the box.
                 pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
                 type: string
                 x-kubernetes-validations:
@@ -113,8 +116,10 @@ spec:
             - agentSessionID
             type: object
           status:
+            description: Observed state of an AgentBox.
             properties:
               conditions:
+                description: Latest observations.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -174,11 +179,14 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               namespace:
+                description: Namespace provisioned for the box.
                 type: string
               observedGeneration:
+                description: Last reconciled generation.
                 format: int64
                 type: integer
               phase:
+                description: Lifecycle phase.
                 enum:
                 - Pending
                 - Provisioning
@@ -188,6 +196,7 @@ spec:
                 - Failed
                 type: string
               serviceAccountName:
+                description: Service account agents run as.
                 type: string
             type: object
         required:

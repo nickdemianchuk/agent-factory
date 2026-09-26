@@ -5,47 +5,60 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Desired state of an AgentWorker.
 type AgentWorkerSpec struct {
+	// Fixed session UUID shared by all resources in the box.
 	// +required
 	// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="agentSessionID is immutable"
 	AgentSessionID string `json:"agentSessionID"`
 
+	// Container image.
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	Image string `json:"image"`
 
+	// Overrides the image entrypoint.
 	// +optional
 	// +listType=atomic
 	Command []string `json:"command,omitempty"`
 
+	// Entrypoint arguments.
 	// +optional
 	// +listType=atomic
 	Args []string `json:"args,omitempty"`
 
+	// Environment variables.
 	// +optional
 	// +listType=map
 	// +listMapKey=name
 	Env []corev1.EnvVar `json:"env,omitempty"`
 
+	// Compute resources.
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitzero"`
 
+	// Workspace mount path.
 	// +optional
 	// +kubebuilder:default=/workspace
 	WorkspaceMountPath string `json:"workspaceMountPath,omitempty"`
 }
 
+// Observed state of an AgentWorker.
 type AgentWorkerStatus struct {
+	// Lifecycle phase.
 	// +optional
 	Phase Phase `json:"phase,omitempty"`
 
+	// Worker Pod name.
 	// +optional
 	PodName string `json:"podName,omitempty"`
 
+	// Last reconciled generation.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
+	// Latest observations.
 	// +optional
 	// +listType=map
 	// +listMapKey=type
@@ -60,6 +73,7 @@ type AgentWorkerStatus struct {
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
+// Agent worker Pod; child of an AgentBox.
 type AgentWorker struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
