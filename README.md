@@ -2,7 +2,7 @@
 
 Kubernetes operator that provisions isolated runtimes for agents.
 
-Each agent session is one `AgentBox`. Its spec carries the workspace and worker templates, and the box controller provisions the rest. Every resource in a session shares one fixed `AgentSessionID` (a UUID), carried in `spec.agentSessionID` and the `agentfactory.io/session-id` label.
+Each agent box is one `AgentBox`. Its spec carries the workspace and worker templates, and the box controller provisions the rest. Every resource in an agent box shares one fixed `AgentBoxID` (a UUID), carried in `spec.agentBoxID` and the `agentfactory.io/agent-box-id` label.
 
 | Kind | Scope | Role | Kubernetes resources | Name |
 | --- | --- | --- | --- | --- |
@@ -16,7 +16,7 @@ kind: AgentBox
 metadata:
   name: agent-box-11111111-1111-4111-8111-111111111111
 spec:
-  agentSessionID: 11111111-1111-4111-8111-111111111111
+  agentBoxID: 11111111-1111-4111-8111-111111111111
   workspace:
     size: 1Gi
   worker:
@@ -27,7 +27,7 @@ The box controller creates the namespace and RBAC, then the workspace, and creat
 
 ## AgentFactory
 
-`AgentFactory` is not a CRD. It is the controller (`cmd/agent-factory-controller`) running the three reconcilers, plus the `factory` package, a client with full CRUD over a session:
+`AgentFactory` is not a CRD. It is the controller (`cmd/agent-factory-controller`) running the three reconcilers, plus the `factory` package, a client with full CRUD over agent boxes:
 
 ```go
 f := factory.New(c)

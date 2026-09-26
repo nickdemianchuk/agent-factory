@@ -25,7 +25,7 @@ func newBox(id, class string) *agentv1.AgentBox {
 	return &agentv1.AgentBox{
 		ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(id)},
 		Spec: agentv1.AgentBoxSpec{
-			AgentSessionID: id,
+			AgentBoxID: id,
 			Rules: []rbacv1.PolicyRule{
 				{APIGroups: []string{""}, Resources: []string{"configmaps"}, Verbs: []string{"get"}},
 			},
@@ -54,7 +54,7 @@ func TestBoxProvisionsEverythingInOrder(t *testing.T) {
 
 	var namespace corev1.Namespace
 	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Name: ns}, &namespace)).To(Succeed())
-	g.Expect(namespace.Labels).To(HaveKeyWithValue(agentv1.SessionIDLabel, id))
+	g.Expect(namespace.Labels).To(HaveKeyWithValue(agentv1.AgentBoxIDLabel, id))
 	g.Expect(namespace.Labels).To(HaveKeyWithValue(componentLabel, componentBox))
 	g.Expect(namespace.Labels).To(HaveKeyWithValue(managedByLabel, managedByValue))
 	g.Expect(box.Finalizers).To(ContainElement(agentv1.BoxFinalizer))
@@ -72,7 +72,7 @@ func TestBoxProvisionsEverythingInOrder(t *testing.T) {
 	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName}, &ws)).To(Succeed())
 	g.Expect(ws.OwnerReferences).To(HaveLen(1))
 	g.Expect(ws.OwnerReferences[0].UID).To(Equal(box.UID))
-	g.Expect(ws.Spec.AgentSessionID).To(Equal(id))
+	g.Expect(ws.Spec.AgentBoxID).To(Equal(id))
 	g.Expect(ws.Spec.Size.String()).To(Equal("1Gi"))
 
 	var worker agentv1.AgentWorker
@@ -84,7 +84,7 @@ func TestBoxProvisionsEverythingInOrder(t *testing.T) {
 
 	var pvc corev1.PersistentVolumeClaim
 	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName}, &pvc)).To(Succeed())
-	g.Expect(pvc.Labels).To(HaveKeyWithValue(agentv1.SessionIDLabel, id))
+	g.Expect(pvc.Labels).To(HaveKeyWithValue(agentv1.AgentBoxIDLabel, id))
 	g.Expect(pvc.Labels).To(HaveKeyWithValue(componentLabel, componentWorkspace))
 	g.Expect(pvc.Spec.AccessModes).To(ConsistOf(corev1.ReadWriteOnce))
 
@@ -153,7 +153,7 @@ func TestBoxSpecValidationAndPropagation(t *testing.T) {
 		Should(Equal(agentv1.PhaseReady))
 
 	other := box.DeepCopy()
-	other.Spec.AgentSessionID = string(uuid.NewUUID())
+	other.Spec.AgentBoxID = string(uuid.NewUUID())
 	g.Expect(k8sClient.Update(ctx, other)).To(MatchError(ContainSubstring("immutable")))
 	other = box.DeepCopy()
 	other.Spec.Worker.Image = "alpine"
@@ -186,7 +186,7 @@ func TestBoxRequiresWorkspaceAndWorker(t *testing.T) {
 	g.Expect(k8sClient.Create(context.Background(), bad)).NotTo(Succeed())
 }
 
-func TestSessionsReuseFixedNamesInSeparateNamespaces(t *testing.T) {
+func TestAgentBoxesReuseFixedNamesInSeparateNamespaces(t *testing.T) {
 	g := NewWithT(t)
 	ctx := context.Background()
 
@@ -198,7 +198,7 @@ func TestSessionsReuseFixedNamesInSeparateNamespaces(t *testing.T) {
 		var pod corev1.Pod
 		key := client.ObjectKey{Namespace: agentv1.BoxName(id), Name: agentv1.WorkerName}
 		g.Eventually(func() error { return k8sClient.Get(ctx, key, &pod) }, timeout, interval).Should(Succeed())
-		g.Expect(pod.Labels).To(HaveKeyWithValue(agentv1.SessionIDLabel, id))
+		g.Expect(pod.Labels).To(HaveKeyWithValue(agentv1.AgentBoxIDLabel, id))
 		g.Expect(pod.Spec.Volumes[0].PersistentVolumeClaim.ClaimName).To(Equal(agentv1.WorkspaceName))
 	}
 }

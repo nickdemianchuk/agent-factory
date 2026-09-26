@@ -72,7 +72,7 @@ func (r *AgentBoxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	box.Status.Namespace = agentv1.BoxName(box.Spec.AgentSessionID)
+	box.Status.Namespace = agentv1.BoxName(box.Spec.AgentBoxID)
 	box.Status.ServiceAccountName = BoxServiceAccount
 	box.Status.ObservedGeneration = box.Generation
 	box.Status.Phase = agentv1.PhaseProvisioning
@@ -92,13 +92,13 @@ func (r *AgentBoxReconciler) provision(
 		return false, "", "", err
 	}
 
-	id := box.Spec.AgentSessionID
+	id := box.Spec.AgentBoxID
 	ns := agentv1.BoxName(id)
 	ws := &agentv1.AgentWorkspace{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkspaceName, Namespace: ns}}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, ws, func() error {
 		ws.Labels = mergeLabels(ws.Labels, resourceLabels(id, componentWorkspace))
 		ws.Spec = agentv1.AgentWorkspaceSpec{
-			AgentSessionID:         id,
+			AgentBoxID:             id,
 			AgentWorkspaceTemplate: *box.Spec.Workspace.DeepCopy(),
 		}
 		return controllerutil.SetControllerReference(box, ws, r.Scheme)
@@ -113,7 +113,7 @@ func (r *AgentBoxReconciler) provision(
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, worker, func() error {
 		worker.Labels = mergeLabels(worker.Labels, resourceLabels(id, componentWorker))
 		worker.Spec = agentv1.AgentWorkerSpec{
-			AgentSessionID:      id,
+			AgentBoxID:          id,
 			AgentWorkerTemplate: *box.Spec.Worker.DeepCopy(),
 		}
 		return controllerutil.SetControllerReference(box, worker, r.Scheme)
@@ -131,8 +131,8 @@ func workspaceMessage(ws *agentv1.AgentWorkspace) string {
 }
 
 func (r *AgentBoxReconciler) reconcileResources(ctx context.Context, box *agentv1.AgentBox) error {
-	name := agentv1.BoxName(box.Spec.AgentSessionID)
-	labels := resourceLabels(box.Spec.AgentSessionID, componentBox)
+	name := agentv1.BoxName(box.Spec.AgentBoxID)
+	labels := resourceLabels(box.Spec.AgentBoxID, componentBox)
 
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, ns, func() error {
@@ -173,7 +173,7 @@ func (r *AgentBoxReconciler) finalize(ctx context.Context, box *agentv1.AgentBox
 	if !controllerutil.ContainsFinalizer(box, agentv1.BoxFinalizer) {
 		return nil
 	}
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(box.Spec.AgentSessionID)}}
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(box.Spec.AgentBoxID)}}
 	if err := r.Delete(ctx, ns); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}

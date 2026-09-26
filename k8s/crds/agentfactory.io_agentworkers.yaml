@@ -19,8 +19,8 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.agentSessionID
-      name: Session
+    - jsonPath: .spec.agentBoxID
+      name: BoxID
       type: string
     - jsonPath: .spec.image
       name: Image
@@ -56,12 +56,12 @@ spec:
           spec:
             description: AgentWorkerSpec is the desired state of an AgentWorker.
             properties:
-              agentSessionID:
-                description: Fixed session UUID shared by all resources in the box.
+              agentBoxID:
+                description: Fixed UUID shared by all resources of the agent box.
                 pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
                 type: string
                 x-kubernetes-validations:
-                - message: agentSessionID is immutable
+                - message: agentBoxID is immutable
                   rule: self == oldSelf
               args:
                 description: Entrypoint arguments.
@@ -305,7 +305,7 @@ spec:
                 description: Workspace mount path.
                 type: string
             required:
-            - agentSessionID
+            - agentBoxID
             - image
             type: object
           status:

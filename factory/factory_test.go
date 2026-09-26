@@ -90,7 +90,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestSessionLifecycle(t *testing.T) {
+func TestAgentBoxLifecycle(t *testing.T) {
 	g := NewWithT(t)
 	ctx := context.Background()
 
@@ -126,7 +126,7 @@ func TestSessionLifecycle(t *testing.T) {
 	g.Expect(testFactory.Delete(ctx, s.ID)).To(MatchError(ErrNotFound))
 }
 
-func TestCreateRejectsInvalidSessionID(t *testing.T) {
+func TestCreateRejectsInvalidAgentBoxID(t *testing.T) {
 	g := NewWithT(t)
 	_, err := testFactory.Create(context.Background(), "nope", testSpec())
 	g.Expect(err).To(HaveOccurred())

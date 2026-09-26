@@ -19,8 +19,8 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.agentSessionID
-      name: Session
+    - jsonPath: .spec.agentBoxID
+      name: BoxID
       type: string
     - jsonPath: .status.phase
       name: Phase
@@ -57,12 +57,12 @@ spec:
           spec:
             description: AgentBoxSpec is the desired state of an AgentBox.
             properties:
-              agentSessionID:
-                description: Fixed session UUID shared by all resources in the box.
+              agentBoxID:
+                description: Fixed UUID shared by all resources of the agent box.
                 pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
                 type: string
                 x-kubernetes-validations:
-                - message: agentSessionID is immutable
+                - message: agentBoxID is immutable
                   rule: self == oldSelf
               rules:
                 description: RBAC rules for the box agent.
@@ -396,7 +396,7 @@ spec:
                 - size
                 type: object
             required:
-            - agentSessionID
+            - agentBoxID
             - worker
             - workspace
             type: object

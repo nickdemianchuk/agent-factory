@@ -18,11 +18,11 @@ const (
 	componentWorker    = "agent-worker"
 )
 
-func resourceLabels(sessionID, component string) map[string]string {
+func resourceLabels(boxID, component string) map[string]string {
 	return map[string]string{
-		agentv1.SessionIDLabel: sessionID,
-		managedByLabel:         managedByValue,
-		componentLabel:         component,
+		agentv1.AgentBoxIDLabel: boxID,
+		managedByLabel:          managedByValue,
+		componentLabel:          component,
 	}
 }
 

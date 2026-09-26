@@ -1,4 +1,4 @@
-// Package factory creates and manages agent sessions: a box, its workspace and its worker.
+// Package factory creates and manages agent boxes, each with its workspace and worker.
 package factory
 
 import (
@@ -23,10 +23,10 @@ const (
 	DefaultPollInterval = time.Second
 )
 
-// ErrNotFound is returned when a session does not exist.
-var ErrNotFound = errors.New("agent session not found")
+// ErrNotFound is returned when an agent box does not exist.
+var ErrNotFound = errors.New("agent box not found")
 
-// Factory manages agent sessions.
+// Factory manages agent boxes.
 type Factory struct {
 	client client.Client
 
@@ -39,28 +39,28 @@ func New(c client.Client) *Factory {
 	return &Factory{client: c, ReadyTimeout: DefaultReadyTimeout, PollInterval: DefaultPollInterval}
 }
 
-// NewSessionID returns a new session ID, a time-ordered UUID v7.
-func NewSessionID() string { return uuid.Must(uuid.NewV7()).String() }
+// NewAgentBoxID returns a new agent box ID, a time-ordered UUID v7.
+func NewAgentBoxID() string { return uuid.Must(uuid.NewV7()).String() }
 
-// Session is a box with its workspace and worker.
-type Session struct {
+// AgentBox is an agent box: the box resource with its workspace and worker.
+type AgentBox struct {
 	ID        string
 	Box       *agentv1.AgentBox
 	Workspace *agentv1.AgentWorkspace
 	Worker    *agentv1.AgentWorker
 }
 
-// Create provisions a session from a box spec, which carries the workspace and worker templates.
-// An empty sessionID generates one. It returns once the box is ready, meaning its workspace is
+// Create provisions an agent box from its spec, which carries the workspace and worker templates.
+// An empty boxID generates one. It returns once the box is ready, meaning its workspace is
 // ready and its worker exists.
-func (f *Factory) Create(ctx context.Context, sessionID string, spec agentv1.AgentBoxSpec) (*Session, error) {
-	if sessionID == "" {
-		sessionID = NewSessionID()
+func (f *Factory) Create(ctx context.Context, boxID string, spec agentv1.AgentBoxSpec) (*AgentBox, error) {
+	if boxID == "" {
+		boxID = NewAgentBoxID()
 	}
-	spec.AgentSessionID = sessionID
+	spec.AgentBoxID = boxID
 
 	box := &agentv1.AgentBox{
-		ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(sessionID), Labels: labels(sessionID)},
+		ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(boxID), Labels: labels(boxID)},
 		Spec:       spec,
 	}
 	if err := f.client.Create(ctx, box); err != nil {
@@ -70,10 +70,10 @@ func (f *Factory) Create(ctx context.Context, sessionID string, spec agentv1.Age
 		return nil, fmt.Errorf("wait for box: %w", err)
 	}
 
-	var s *Session
+	var s *AgentBox
 	provisioned := func(ctx context.Context) (bool, error) {
 		var err error
-		if s, err = f.Get(ctx, sessionID); err != nil {
+		if s, err = f.Get(ctx, boxID); err != nil {
 			return false, err
 		}
 		return s.Workspace != nil && s.Worker != nil, nil
@@ -85,15 +85,15 @@ func (f *Factory) Create(ctx context.Context, sessionID string, spec agentv1.Age
 }
 
 // Get returns a nil workspace or worker that does not exist yet.
-func (f *Factory) Get(ctx context.Context, sessionID string) (*Session, error) {
+func (f *Factory) Get(ctx context.Context, boxID string) (*AgentBox, error) {
 	box := &agentv1.AgentBox{}
-	if err := f.client.Get(ctx, client.ObjectKey{Name: agentv1.BoxName(sessionID)}, box); err != nil {
+	if err := f.client.Get(ctx, client.ObjectKey{Name: agentv1.BoxName(boxID)}, box); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, ErrNotFound
 		}
 		return nil, err
 	}
-	s := &Session{ID: sessionID, Box: box}
+	s := &AgentBox{ID: boxID, Box: box}
 	ns := box.Status.Namespace
 	if ns == "" {
 		return s, nil
@@ -116,32 +116,32 @@ func (f *Factory) Get(ctx context.Context, sessionID string) (*Session, error) {
 	return s, nil
 }
 
-// List returns all sessions.
-func (f *Factory) List(ctx context.Context) ([]*Session, error) {
+// List returns all agent boxes.
+func (f *Factory) List(ctx context.Context) ([]*AgentBox, error) {
 	var boxes agentv1.AgentBoxList
 	if err := f.client.List(ctx, &boxes); err != nil {
 		return nil, err
 	}
-	sessions := make([]*Session, 0, len(boxes.Items))
+	agentBoxes := make([]*AgentBox, 0, len(boxes.Items))
 	for _, b := range boxes.Items {
-		s, err := f.Get(ctx, b.Spec.AgentSessionID)
+		s, err := f.Get(ctx, b.Spec.AgentBoxID)
 		if errors.Is(err, ErrNotFound) {
 			continue
 		}
 		if err != nil {
 			return nil, err
 		}
-		sessions = append(sessions, s)
+		agentBoxes = append(agentBoxes, s)
 	}
-	return sessions, nil
+	return agentBoxes, nil
 }
 
 // UpdateBox mutates the box spec. The box controller propagates the workspace template to the
 // workspace; the worker template is immutable.
-func (f *Factory) UpdateBox(ctx context.Context, sessionID string, mutate func(*agentv1.AgentBoxSpec)) error {
+func (f *Factory) UpdateBox(ctx context.Context, boxID string, mutate func(*agentv1.AgentBoxSpec)) error {
 	return retryOnConflict(ctx, func() error {
 		box := &agentv1.AgentBox{}
-		if err := f.client.Get(ctx, client.ObjectKey{Name: agentv1.BoxName(sessionID)}, box); err != nil {
+		if err := f.client.Get(ctx, client.ObjectKey{Name: agentv1.BoxName(boxID)}, box); err != nil {
 			if apierrors.IsNotFound(err) {
 				return ErrNotFound
 			}
@@ -154,14 +154,14 @@ func (f *Factory) UpdateBox(ctx context.Context, sessionID string, mutate func(*
 
 // UpdateWorkspace mutates the workspace template, such as its size.
 func (f *Factory) UpdateWorkspace(
-	ctx context.Context, sessionID string, mutate func(*agentv1.AgentWorkspaceTemplate),
+	ctx context.Context, boxID string, mutate func(*agentv1.AgentWorkspaceTemplate),
 ) error {
-	return f.UpdateBox(ctx, sessionID, func(sp *agentv1.AgentBoxSpec) { mutate(&sp.Workspace) })
+	return f.UpdateBox(ctx, boxID, func(sp *agentv1.AgentBoxSpec) { mutate(&sp.Workspace) })
 }
 
-// Delete removes a session by deleting its box, which removes the workspace and worker.
-func (f *Factory) Delete(ctx context.Context, sessionID string) error {
-	box := &agentv1.AgentBox{ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(sessionID)}}
+// Delete removes an agent box, which removes its workspace and worker.
+func (f *Factory) Delete(ctx context.Context, boxID string) error {
+	box := &agentv1.AgentBox{ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(boxID)}}
 	if err := f.client.Delete(ctx, box); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ErrNotFound
@@ -213,6 +213,6 @@ func isTerminalReason(reason string) bool {
 	return false
 }
 
-func labels(sessionID string) map[string]string {
-	return map[string]string{agentv1.SessionIDLabel: sessionID}
+func labels(boxID string) map[string]string {
+	return map[string]string{agentv1.AgentBoxIDLabel: boxID}
 }

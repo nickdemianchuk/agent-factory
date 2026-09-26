@@ -7,11 +7,11 @@ import (
 
 // AgentBoxSpec is the desired state of an AgentBox.
 type AgentBoxSpec struct {
-	// Fixed session UUID shared by all resources in the box.
+	// Fixed UUID shared by all resources of the agent box.
 	// +required
 	// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="agentSessionID is immutable"
-	AgentSessionID string `json:"agentSessionID"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="agentBoxID is immutable"
+	AgentBoxID string `json:"agentBoxID"`
 
 	// RBAC rules for the box agent.
 	// +optional
@@ -56,7 +56,7 @@ type AgentBoxStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=abox,categories=agentfactory
-// +kubebuilder:printcolumn:name="Session",type=string,JSONPath=`.spec.agentSessionID`
+// +kubebuilder:printcolumn:name="BoxID",type=string,JSONPath=`.spec.agentBoxID`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Namespace",type=string,JSONPath=`.status.namespace`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`

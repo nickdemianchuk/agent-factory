@@ -41,7 +41,7 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 	base := ws.DeepCopy()
 
-	id := ws.Spec.AgentSessionID
+	id := ws.Spec.AgentBoxID
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkspaceName, Namespace: ws.Namespace},
 	}

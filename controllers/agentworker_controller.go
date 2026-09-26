@@ -87,7 +87,7 @@ func (r *AgentWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 }
 
 func (r *AgentWorkerReconciler) buildPod(w *agentv1.AgentWorker, serviceAccount string) *corev1.Pod {
-	id := w.Spec.AgentSessionID
+	id := w.Spec.AgentBoxID
 	mountPath := w.Spec.WorkspaceMountPath
 	if mountPath == "" {
 		mountPath = defaultMountPath

@@ -19,8 +19,8 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.agentSessionID
-      name: Session
+    - jsonPath: .spec.agentBoxID
+      name: BoxID
       type: string
     - jsonPath: .spec.size
       name: Size
@@ -65,12 +65,12 @@ spec:
                 x-kubernetes-validations:
                 - message: accessModes is immutable
                   rule: self == oldSelf
-              agentSessionID:
-                description: Fixed session UUID shared by all resources in the box.
+              agentBoxID:
+                description: Fixed UUID shared by all resources of the agent box.
                 pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
                 type: string
                 x-kubernetes-validations:
-                - message: agentSessionID is immutable
+                - message: agentBoxID is immutable
                   rule: self == oldSelf
               size:
                 anyOf:
@@ -86,7 +86,7 @@ spec:
                 - message: storageClassName is immutable
                   rule: self == oldSelf
             required:
-            - agentSessionID
+            - agentBoxID
             - size
             type: object
           status:
