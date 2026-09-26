@@ -6,14 +6,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// AgentWorkspaceSpec is the desired state of an AgentWorkspace.
-type AgentWorkspaceSpec struct {
-	// Fixed session UUID shared by all resources in the box.
-	// +required
-	// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="agentSessionID is immutable"
-	AgentSessionID string `json:"agentSessionID"`
-
+// AgentWorkspaceTemplate is the user-settable part of an AgentWorkspace.
+type AgentWorkspaceTemplate struct {
 	// Requested capacity; can only grow.
 	// +required
 	Size resource.Quantity `json:"size"`
@@ -28,6 +22,17 @@ type AgentWorkspaceSpec struct {
 	// +listType=set
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="accessModes is immutable"
 	AccessModes []corev1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
+}
+
+// AgentWorkspaceSpec is the desired state of an AgentWorkspace.
+type AgentWorkspaceSpec struct {
+	// Fixed session UUID shared by all resources in the box.
+	// +required
+	// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="agentSessionID is immutable"
+	AgentSessionID string `json:"agentSessionID"`
+
+	AgentWorkspaceTemplate `json:",inline"`
 }
 
 // AgentWorkspaceStatus is the observed state of an AgentWorkspace.

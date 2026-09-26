@@ -21,132 +21,162 @@ const (
 	interval = 100 * time.Millisecond
 )
 
-func TestBoxProvisionsNamespaceAndRBAC(t *testing.T) {
-	g := NewWithT(t)
-	ctx := context.Background()
-	id := string(uuid.NewUUID())
-
-	box := &agentv1.AgentBox{
+func newBox(id, class string) *agentv1.AgentBox {
+	return &agentv1.AgentBox{
 		ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(id)},
 		Spec: agentv1.AgentBoxSpec{
 			AgentSessionID: id,
 			Rules: []rbacv1.PolicyRule{
 				{APIGroups: []string{""}, Resources: []string{"configmaps"}, Verbs: []string{"get"}},
 			},
+			Workspace: agentv1.AgentWorkspaceTemplate{Size: resource.MustParse("1Gi"), StorageClassName: &class},
+			Worker:    agentv1.AgentWorkerTemplate{Image: "busybox"},
 		},
 	}
-	g.Expect(k8sClient.Create(ctx, box)).To(Succeed())
-
-	g.Eventually(func() agentv1.Phase {
-		_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(box), box)
-		return box.Status.Phase
-	}, timeout, interval).Should(Equal(agentv1.PhaseReady))
-	g.Expect(box.Status.Namespace).To(Equal("box-" + id))
-
-	var ns corev1.Namespace
-	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Name: "box-" + id}, &ns)).To(Succeed())
-	g.Expect(ns.Labels).To(HaveKeyWithValue(agentv1.SessionIDLabel, id))
-	g.Expect(ns.OwnerReferences).To(HaveLen(1))
-	g.Expect(ns.OwnerReferences[0].UID).To(Equal(box.UID))
-
-	var role rbacv1.Role
-	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: "box-" + id, Name: BoxRole}, &role)).To(Succeed())
-	g.Expect(role.Rules).To(HaveLen(1))
-	var binding rbacv1.RoleBinding
-	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: "box-" + id, Name: BoxRole}, &binding)).To(Succeed())
-	g.Expect(binding.Subjects[0].Name).To(Equal(BoxServiceAccount))
-
-	g.Expect(k8sClient.Delete(ctx, box)).To(Succeed())
-	g.Eventually(func() bool {
-		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(box), box)
-		return client.IgnoreNotFound(err) == nil && err != nil
-	}, timeout, interval).Should(BeTrue())
-	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Name: "box-" + id}, &ns)).To(Succeed())
-	g.Expect(ns.DeletionTimestamp).NotTo(BeNil())
 }
 
-func TestWorkspaceAndWorkerWaitForBoxThenProvision(t *testing.T) {
+func boxPhase(g Gomega, box *agentv1.AgentBox) agentv1.Phase {
+	g.Expect(k8sClient.Get(context.Background(), client.ObjectKeyFromObject(box), box)).To(Succeed())
+	return box.Status.Phase
+}
+
+func TestBoxProvisionsEverythingInOrder(t *testing.T) {
 	g := NewWithT(t)
 	ctx := context.Background()
 	id := string(uuid.NewUUID())
-	ns := "box-" + id
+	ns := agentv1.BoxName(id)
 
-	box := &agentv1.AgentBox{
-		ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(id)},
-		Spec:       agentv1.AgentBoxSpec{AgentSessionID: id},
-	}
+	box := newBox(id, waitClass)
 	g.Expect(k8sClient.Create(ctx, box)).To(Succeed())
-	g.Eventually(func() string {
-		_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(box), box)
-		return box.Status.Namespace
-	}, timeout, interval).Should(Equal(ns))
+	g.Eventually(func(g Gomega) agentv1.Phase { return boxPhase(g, box) }, timeout, interval).
+		Should(Equal(agentv1.PhaseReady))
+	g.Expect(box.Status.Namespace).To(Equal(ns))
 
-	worker := &agentv1.AgentWorker{
-		ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkerName(id), Namespace: ns},
-		Spec:       agentv1.AgentWorkerSpec{AgentSessionID: id, Image: "busybox"},
-	}
-	g.Expect(k8sClient.Create(ctx, worker)).To(Succeed())
+	var namespace corev1.Namespace
+	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Name: ns}, &namespace)).To(Succeed())
+	g.Expect(namespace.Labels).To(HaveKeyWithValue(agentv1.SessionIDLabel, id))
+	g.Expect(namespace.OwnerReferences).To(HaveLen(1))
+	g.Expect(namespace.OwnerReferences[0].UID).To(Equal(box.UID))
 
-	g.Eventually(func() string {
-		_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)
-		for _, c := range worker.Status.Conditions {
-			return c.Reason
-		}
-		return ""
-	}, timeout, interval).Should(Equal("WaitingForWorkspace"))
-	var pod corev1.Pod
-	err := k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName(id)}, &pod)
-	g.Expect(client.IgnoreNotFound(err)).To(Succeed())
-	g.Expect(err).To(HaveOccurred())
+	var role rbacv1.Role
+	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: BoxRole}, &role)).To(Succeed())
+	g.Expect(role.Rules).To(HaveLen(1))
+	var binding rbacv1.RoleBinding
+	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: BoxRole}, &binding)).To(Succeed())
+	g.Expect(binding.Subjects[0].Name).To(Equal(BoxServiceAccount))
 
-	ws := &agentv1.AgentWorkspace{
-		ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkspaceName(id), Namespace: ns},
-		Spec:       agentv1.AgentWorkspaceSpec{AgentSessionID: id, Size: resource.MustParse("1Gi")},
-	}
-	g.Expect(k8sClient.Create(ctx, ws)).To(Succeed())
-	g.Eventually(func() agentv1.Phase {
-		_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(ws), ws)
-		return ws.Status.Phase
-	}, timeout, interval).Should(Equal(agentv1.PhaseReady))
+	var ws agentv1.AgentWorkspace
+	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName(id)}, &ws)).To(Succeed())
 	g.Expect(ws.OwnerReferences).To(HaveLen(1))
 	g.Expect(ws.OwnerReferences[0].UID).To(Equal(box.UID))
+	g.Expect(ws.Spec.AgentSessionID).To(Equal(id))
+	g.Expect(ws.Spec.Size.String()).To(Equal("1Gi"))
+
+	var worker agentv1.AgentWorker
+	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName(id)}, &worker)).To(Succeed())
+	g.Expect(worker.OwnerReferences).To(HaveLen(1))
+	g.Expect(worker.OwnerReferences[0].UID).To(Equal(box.UID))
+	g.Expect(worker.Spec.Image).To(Equal("busybox"))
+	g.Expect(worker.Spec.WorkspaceMountPath).To(Equal("/workspace"))
 
 	var pvc corev1.PersistentVolumeClaim
 	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName(id)}, &pvc)).To(Succeed())
 	g.Expect(pvc.Labels).To(HaveKeyWithValue(agentv1.SessionIDLabel, id))
 	g.Expect(pvc.Spec.AccessModes).To(ConsistOf(corev1.ReadWriteOnce))
 
+	var pod corev1.Pod
 	g.Eventually(func() error {
 		return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName(id)}, &pod)
 	}, timeout, interval).Should(Succeed())
-	g.Expect(pod.Spec.Volumes[0].PersistentVolumeClaim.ClaimName).To(Equal("workspace-" + id))
+	g.Expect(pod.Spec.Volumes[0].PersistentVolumeClaim.ClaimName).To(Equal(agentv1.WorkspaceName(id)))
 	g.Expect(pod.Spec.ServiceAccountName).To(Equal(BoxServiceAccount))
 	g.Expect(pod.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal("/workspace"))
-	g.Expect(pod.Labels).To(HaveKeyWithValue(agentv1.SessionIDLabel, id))
 
-	g.Eventually(func() string {
-		_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)
-		return worker.Status.PodName
-	}, timeout, interval).Should(Equal("worker-" + id))
-	g.Expect(worker.OwnerReferences).To(HaveLen(1))
-	g.Expect(worker.OwnerReferences[0].UID).To(Equal(box.UID))
+	g.Expect(k8sClient.Delete(ctx, box)).To(Succeed())
+	g.Eventually(func() bool {
+		return client.IgnoreNotFound(k8sClient.Get(ctx, client.ObjectKeyFromObject(box), box)) == nil &&
+			k8sClient.Get(ctx, client.ObjectKeyFromObject(box), box) != nil
+	}, timeout, interval).Should(BeTrue())
+	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Name: ns}, &namespace)).To(Succeed())
+	g.Expect(namespace.DeletionTimestamp).NotTo(BeNil())
 }
 
-func TestSessionIDIsImmutable(t *testing.T) {
+func TestWorkerWaitsForBoundWorkspace(t *testing.T) {
 	g := NewWithT(t)
 	ctx := context.Background()
 	id := string(uuid.NewUUID())
-	box := &agentv1.AgentBox{
-		ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(id)},
-		Spec:       agentv1.AgentBoxSpec{AgentSessionID: id},
-	}
-	g.Expect(k8sClient.Create(ctx, box)).To(Succeed())
-	box.Spec.AgentSessionID = string(uuid.NewUUID())
-	g.Expect(k8sClient.Update(ctx, box)).To(MatchError(ContainSubstring("immutable")))
+	ns := agentv1.BoxName(id)
 
-	bad := &agentv1.AgentBox{
-		ObjectMeta: metav1.ObjectMeta{Name: "box-bad"},
-		Spec:       agentv1.AgentBoxSpec{AgentSessionID: "not-a-uuid"},
-	}
-	g.Expect(k8sClient.Create(ctx, bad)).NotTo(Succeed())
+	box := newBox(id, immediateClass)
+	g.Expect(k8sClient.Create(ctx, box)).To(Succeed())
+
+	var pvc corev1.PersistentVolumeClaim
+	g.Eventually(func() error {
+		return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName(id)}, &pvc)
+	}, timeout, interval).Should(Succeed())
+	g.Eventually(func(g Gomega) agentv1.Phase { return boxPhase(g, box) }, timeout, interval).
+		Should(Equal(agentv1.PhaseProvisioning))
+
+	// The claim is unbound, so the worker must not exist yet.
+	worker := &agentv1.AgentWorker{}
+	workerKey := client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName(id)}
+	g.Consistently(func() bool {
+		return client.IgnoreNotFound(k8sClient.Get(ctx, workerKey, worker)) == nil &&
+			k8sClient.Get(ctx, workerKey, worker) != nil
+	}, 2*time.Second, interval).Should(BeTrue())
+
+	g.Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(&pvc), &pvc)).To(Succeed())
+		pvc.Status.Phase = corev1.ClaimBound
+		g.Expect(k8sClient.Status().Update(ctx, &pvc)).To(Succeed())
+	}, timeout, interval).Should(Succeed())
+
+	g.Eventually(func() error { return k8sClient.Get(ctx, workerKey, worker) }, timeout, interval).Should(Succeed())
+	g.Eventually(func(g Gomega) agentv1.Phase { return boxPhase(g, box) }, timeout, interval).
+		Should(Equal(agentv1.PhaseReady))
+}
+
+func TestBoxSpecValidationAndPropagation(t *testing.T) {
+	g := NewWithT(t)
+	ctx := context.Background()
+	id := string(uuid.NewUUID())
+	ns := agentv1.BoxName(id)
+
+	box := newBox(id, waitClass)
+	g.Expect(k8sClient.Create(ctx, box)).To(Succeed())
+	g.Eventually(func(g Gomega) agentv1.Phase { return boxPhase(g, box) }, timeout, interval).
+		Should(Equal(agentv1.PhaseReady))
+
+	other := box.DeepCopy()
+	other.Spec.AgentSessionID = string(uuid.NewUUID())
+	g.Expect(k8sClient.Update(ctx, other)).To(MatchError(ContainSubstring("immutable")))
+	other = box.DeepCopy()
+	other.Spec.Worker.Image = "alpine"
+	g.Expect(k8sClient.Update(ctx, other)).To(MatchError(ContainSubstring("immutable")))
+
+	// A growing size reaches the workspace; the unbound claim keeps its size.
+	box.Spec.Workspace.Size = resource.MustParse("2Gi")
+	g.Expect(k8sClient.Update(ctx, box)).To(Succeed())
+	var ws agentv1.AgentWorkspace
+	g.Eventually(func() string {
+		_ = k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName(id)}, &ws)
+		return ws.Spec.Size.String()
+	}, timeout, interval).Should(Equal("2Gi"))
+	g.Eventually(func(g Gomega) agentv1.Phase { return boxPhase(g, box) }, timeout, interval).
+		Should(Equal(agentv1.PhaseReady))
+	var pvc corev1.PersistentVolumeClaim
+	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName(id)}, &pvc)).To(Succeed())
+	g.Expect(pvc.Spec.Resources.Requests.Storage().String()).To(Equal("1Gi"))
+}
+
+func TestBoxRequiresWorkspaceAndWorker(t *testing.T) {
+	g := NewWithT(t)
+	id := string(uuid.NewUUID())
+
+	box := newBox(id, waitClass)
+	box.Spec.Worker = agentv1.AgentWorkerTemplate{}
+	g.Expect(k8sClient.Create(context.Background(), box)).NotTo(Succeed())
+
+	bad := newBox("not-a-uuid", waitClass)
+	g.Expect(k8sClient.Create(context.Background(), bad)).NotTo(Succeed())
 }

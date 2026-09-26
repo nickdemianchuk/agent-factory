@@ -46,40 +46,12 @@ func (r *AgentWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	base := worker.DeepCopy()
 
 	id := worker.Spec.AgentSessionID
-	box, err := getBox(ctx, r.Client, id)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if box == nil || !isReady(box.Status.Conditions, box.Generation) || worker.Namespace != box.Status.Namespace {
-		return r.waiting(ctx, &worker, base, "WaitingForBox", "box is not ready")
-	}
-
-	var ws agentv1.AgentWorkspace
-	key := client.ObjectKey{Namespace: worker.Namespace, Name: agentv1.WorkspaceName(id)}
-	if err := r.Get(ctx, key, &ws); err != nil {
-		if apierrors.IsNotFound(err) {
-			return r.waiting(ctx, &worker, base, "WaitingForWorkspace", "workspace does not exist")
-		}
-		return ctrl.Result{}, err
-	}
-	if !isReady(ws.Status.Conditions, ws.Generation) {
-		return r.waiting(ctx, &worker, base, "WaitingForWorkspace", "workspace is not ready")
-	}
-
-	if err := controllerutil.SetOwnerReference(box, &worker, r.Scheme); err != nil {
-		return ctrl.Result{}, err
-	}
-	if err := r.Patch(ctx, &worker, client.MergeFrom(base)); err != nil {
-		return ctrl.Result{}, err
-	}
-	base = worker.DeepCopy()
-
 	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkerName(id), Namespace: worker.Namespace}}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
-		pod = r.buildPod(&worker, box.Status.ServiceAccountName)
+		pod = r.buildPod(&worker, BoxServiceAccount)
 		if err := controllerutil.SetControllerReference(&worker, pod, r.Scheme); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -113,18 +85,6 @@ func (r *AgentWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			"worker pod is "+string(pod.Status.Phase))
 	}
 	return ctrl.Result{}, r.Status().Patch(ctx, &worker, client.MergeFrom(base))
-}
-
-func (r *AgentWorkerReconciler) waiting(
-	ctx context.Context, w, base *agentv1.AgentWorker, reason, msg string,
-) (ctrl.Result, error) {
-	w.Status.Phase = agentv1.PhasePending
-	setReady(&w.Status.Conditions, w.Generation, false, reason, msg)
-	w.Status.ObservedGeneration = w.Generation
-	if err := r.Status().Patch(ctx, w, client.MergeFrom(base)); err != nil {
-		return ctrl.Result{}, err
-	}
-	return ctrl.Result{RequeueAfter: requeueWaiting}, nil
 }
 
 func (r *AgentWorkerReconciler) buildPod(w *agentv1.AgentWorker, serviceAccount string) *corev1.Pod {

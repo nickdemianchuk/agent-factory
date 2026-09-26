@@ -13,15 +13,24 @@ AgentFactory (controller manager + factory package, not a CRD)
 
 ## Ordering
 
-1. `AgentBox` is ready once its namespace and RBAC exist.
-2. `AgentWorkspace` stays `Pending` until the box is ready, then creates its PVC. It is ready as soon as the claim exists and is not lost; a claim with `WaitForFirstConsumer` binding only binds once the worker mounts it.
-3. `AgentWorker` stays `Pending` until the box and workspace are ready, then creates its Pod.
+The box controller provisions a session in order and holds each step back until the previous one is ready:
 
-The factory creates the CRs in this order, waiting for readiness in between. The reconcilers enforce the same order independently.
+1. Namespace, ServiceAccount, Role and RoleBinding.
+2. `AgentWorkspace` from `spec.workspace`. It is ready when its PVC is `Bound`, or `Pending` on a `WaitForFirstConsumer` storage class, which only binds once a pod mounts it.
+3. `AgentWorker` from `spec.worker`, created only after the workspace is ready.
+
+The box is `Ready` once the worker exists. Until then it is `Provisioning` with the reason on its conditions. The workspace and worker reconcilers only turn their own CR into a PVC or a Pod.
+
+## Ownership
+
+Workspace and worker are controller-owned by the box, and the box namespace is owned by the box. The `agent-factory-managed-children` admission policy rejects spec changes to them from anyone but the controller. Change the box instead:
+
+- `spec.workspace.size` can grow. The claim is resized only when it is bound and its storage class allows expansion.
+- `spec.worker` is immutable, since a Pod spec cannot change in place.
 
 ## Deletion
 
-Workspace and worker carry an owner reference to the box, and the box namespace is owned by the box. Deleting the box deletes the namespace, which removes everything in it. The box holds a finalizer so the namespace is deleted before the box goes away.
+Deleting the box deletes its namespace, which removes everything in it. The box holds a finalizer so the namespace is deleted before the box goes away.
 
 ## RBAC
 

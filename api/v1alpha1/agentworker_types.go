@@ -5,14 +5,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// AgentWorkerSpec is the desired state of an AgentWorker.
-type AgentWorkerSpec struct {
-	// Fixed session UUID shared by all resources in the box.
-	// +required
-	// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="agentSessionID is immutable"
-	AgentSessionID string `json:"agentSessionID"`
-
+// AgentWorkerTemplate is the user-settable part of an AgentWorker.
+type AgentWorkerTemplate struct {
 	// Container image.
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -42,6 +36,17 @@ type AgentWorkerSpec struct {
 	// +optional
 	// +kubebuilder:default=/workspace
 	WorkspaceMountPath string `json:"workspaceMountPath,omitempty"`
+}
+
+// AgentWorkerSpec is the desired state of an AgentWorker.
+type AgentWorkerSpec struct {
+	// Fixed session UUID shared by all resources in the box.
+	// +required
+	// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="agentSessionID is immutable"
+	AgentSessionID string `json:"agentSessionID"`
+
+	AgentWorkerTemplate `json:",inline"`
 }
 
 // AgentWorkerStatus is the observed state of an AgentWorker.

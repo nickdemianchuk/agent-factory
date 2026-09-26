@@ -50,25 +50,18 @@ type Session struct {
 	Worker    *agentv1.AgentWorker
 }
 
-// Spec describes a session; Create overwrites the session ID in each part.
-type Spec struct {
-	Box       agentv1.AgentBoxSpec
-	Workspace agentv1.AgentWorkspaceSpec
-	Worker    agentv1.AgentWorkerSpec
-}
-
-// Create provisions box, workspace, worker in order; an empty sessionID generates one.
-func (f *Factory) Create(ctx context.Context, sessionID string, spec Spec) (*Session, error) {
+// Create provisions a session from a box spec, which carries the workspace and worker templates.
+// An empty sessionID generates one. It returns once the box is ready, meaning its workspace is
+// ready and its worker exists.
+func (f *Factory) Create(ctx context.Context, sessionID string, spec agentv1.AgentBoxSpec) (*Session, error) {
 	if sessionID == "" {
 		sessionID = NewSessionID()
 	}
-	spec.Box.AgentSessionID = sessionID
-	spec.Workspace.AgentSessionID = sessionID
-	spec.Worker.AgentSessionID = sessionID
+	spec.AgentSessionID = sessionID
 
 	box := &agentv1.AgentBox{
 		ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(sessionID), Labels: labels(sessionID)},
-		Spec:       spec.Box,
+		Spec:       spec,
 	}
 	if err := f.client.Create(ctx, box); err != nil {
 		return nil, fmt.Errorf("create box: %w", err)
@@ -77,26 +70,18 @@ func (f *Factory) Create(ctx context.Context, sessionID string, spec Spec) (*Ses
 		return nil, fmt.Errorf("wait for box: %w", err)
 	}
 
-	ns := box.Status.Namespace
-	ws := &agentv1.AgentWorkspace{
-		ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkspaceName(sessionID), Namespace: ns, Labels: labels(sessionID)},
-		Spec:       spec.Workspace,
+	var s *Session
+	hasChildren := func(ctx context.Context) (bool, error) {
+		var err error
+		if s, err = f.Get(ctx, sessionID); err != nil {
+			return false, err
+		}
+		return s.Workspace != nil && s.Worker != nil, nil
 	}
-	if err := f.client.Create(ctx, ws); err != nil {
-		return nil, fmt.Errorf("create workspace: %w", err)
+	if err := wait.PollUntilContextTimeout(ctx, f.PollInterval, f.ReadyTimeout, true, hasChildren); err != nil {
+		return nil, fmt.Errorf("wait for children: %w", err)
 	}
-	if err := f.waitReady(ctx, ws, &ws.Status.Conditions); err != nil {
-		return nil, fmt.Errorf("wait for workspace: %w", err)
-	}
-
-	worker := &agentv1.AgentWorker{
-		ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkerName(sessionID), Namespace: ns, Labels: labels(sessionID)},
-		Spec:       spec.Worker,
-	}
-	if err := f.client.Create(ctx, worker); err != nil {
-		return nil, fmt.Errorf("create worker: %w", err)
-	}
-	return &Session{ID: sessionID, Box: box, Workspace: ws, Worker: worker}, nil
+	return s, nil
 }
 
 // Get returns nil for children that do not exist yet.
@@ -151,32 +136,27 @@ func (f *Factory) List(ctx context.Context) ([]*Session, error) {
 	return sessions, nil
 }
 
-// UpdateBox mutates the box spec.
+// UpdateBox mutates the box spec. The box controller propagates the workspace template to the
+// workspace; the worker template is immutable.
 func (f *Factory) UpdateBox(ctx context.Context, sessionID string, mutate func(*agentv1.AgentBoxSpec)) error {
-	return f.update(ctx, &agentv1.AgentBox{}, client.ObjectKey{Name: agentv1.BoxName(sessionID)},
-		func(o client.Object) { mutate(&o.(*agentv1.AgentBox).Spec) })
+	return retryOnConflict(ctx, func() error {
+		box := &agentv1.AgentBox{}
+		if err := f.client.Get(ctx, client.ObjectKey{Name: agentv1.BoxName(sessionID)}, box); err != nil {
+			if apierrors.IsNotFound(err) {
+				return ErrNotFound
+			}
+			return err
+		}
+		mutate(&box.Spec)
+		return f.client.Update(ctx, box)
+	})
 }
 
-// UpdateWorkspace mutates the workspace spec.
+// UpdateWorkspace mutates the workspace template, such as its size.
 func (f *Factory) UpdateWorkspace(
-	ctx context.Context, sessionID string, mutate func(*agentv1.AgentWorkspaceSpec),
+	ctx context.Context, sessionID string, mutate func(*agentv1.AgentWorkspaceTemplate),
 ) error {
-	key, err := f.childKey(ctx, sessionID, agentv1.WorkspaceName(sessionID))
-	if err != nil {
-		return err
-	}
-	return f.update(ctx, &agentv1.AgentWorkspace{}, key,
-		func(o client.Object) { mutate(&o.(*agentv1.AgentWorkspace).Spec) })
-}
-
-// UpdateWorker mutates the worker spec.
-func (f *Factory) UpdateWorker(ctx context.Context, sessionID string, mutate func(*agentv1.AgentWorkerSpec)) error {
-	key, err := f.childKey(ctx, sessionID, agentv1.WorkerName(sessionID))
-	if err != nil {
-		return err
-	}
-	return f.update(ctx, &agentv1.AgentWorker{}, key,
-		func(o client.Object) { mutate(&o.(*agentv1.AgentWorker).Spec) })
+	return f.UpdateBox(ctx, sessionID, func(sp *agentv1.AgentBoxSpec) { mutate(&sp.Workspace) })
 }
 
 // Delete removes a session and, with its box, every child.
@@ -189,29 +169,6 @@ func (f *Factory) Delete(ctx context.Context, sessionID string) error {
 		return err
 	}
 	return nil
-}
-
-func (f *Factory) childKey(ctx context.Context, sessionID, name string) (client.ObjectKey, error) {
-	s, err := f.Get(ctx, sessionID)
-	if err != nil {
-		return client.ObjectKey{}, err
-	}
-	if s.Box.Status.Namespace == "" {
-		return client.ObjectKey{}, fmt.Errorf("box for session %s is not provisioned", sessionID)
-	}
-	return client.ObjectKey{Namespace: s.Box.Status.Namespace, Name: name}, nil
-}
-
-func (f *Factory) update(
-	ctx context.Context, obj client.Object, key client.ObjectKey, mutate func(client.Object),
-) error {
-	return retryOnConflict(ctx, func() error {
-		if err := f.client.Get(ctx, key, obj); err != nil {
-			return err
-		}
-		mutate(obj)
-		return f.client.Update(ctx, obj)
-	})
 }
 
 func retryOnConflict(ctx context.Context, fn func() error) error {

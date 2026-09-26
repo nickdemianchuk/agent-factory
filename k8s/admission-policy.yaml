@@ -1,0 +1,25 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: agent-factory-managed-children
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["agentfactory.io"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["agentworkspaces", "agentworkers"]
+  validations:
+    - expression: >-
+        request.userInfo.username == 'system:serviceaccount:agent-factory-system:agent-factory' ||
+        (request.operation == 'UPDATE' && object.spec == oldObject.spec)
+      message: workspaces and workers are managed by their AgentBox; edit the box instead
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: agent-factory-managed-children
+spec:
+  policyName: agent-factory-managed-children
+  validationActions: ["Deny"]

@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -59,8 +60,9 @@ func (r *AgentBoxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 	base = box.DeepCopy()
 
-	if err := r.reconcileResources(ctx, &box); err != nil {
-		log.Error(err, "Failed to provision box resources")
+	ready, reason, message, err := r.provision(ctx, &box)
+	if err != nil {
+		log.Error(err, "Failed to provision box")
 		box.Status.Phase = agentv1.PhaseFailed
 		setReady(&box.Status.Conditions, box.Generation, false, "ProvisionFailed", err.Error())
 		box.Status.ObservedGeneration = box.Generation
@@ -70,12 +72,62 @@ func (r *AgentBoxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	box.Status.Phase = agentv1.PhaseReady
 	box.Status.Namespace = agentv1.BoxName(box.Spec.AgentSessionID)
 	box.Status.ServiceAccountName = BoxServiceAccount
 	box.Status.ObservedGeneration = box.Generation
-	setReady(&box.Status.Conditions, box.Generation, true, "Provisioned", "namespace and RBAC are in place")
+	box.Status.Phase = agentv1.PhaseProvisioning
+	if ready {
+		box.Status.Phase = agentv1.PhaseReady
+	}
+	setReady(&box.Status.Conditions, box.Generation, ready, reason, message)
 	return ctrl.Result{}, r.Status().Patch(ctx, &box, client.MergeFrom(base))
+}
+
+// provision creates the namespace, RBAC, workspace and worker in that order,
+// holding back the worker until the workspace is ready.
+func (r *AgentBoxReconciler) provision(
+	ctx context.Context, box *agentv1.AgentBox,
+) (ready bool, reason, message string, err error) {
+	if err := r.reconcileResources(ctx, box); err != nil {
+		return false, "", "", err
+	}
+
+	id := box.Spec.AgentSessionID
+	ns := agentv1.BoxName(id)
+	ws := &agentv1.AgentWorkspace{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkspaceName(id), Namespace: ns}}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, ws, func() error {
+		ws.Labels = mergeLabels(ws.Labels, sessionLabels(id))
+		ws.Spec = agentv1.AgentWorkspaceSpec{
+			AgentSessionID:         id,
+			AgentWorkspaceTemplate: *box.Spec.Workspace.DeepCopy(),
+		}
+		return controllerutil.SetControllerReference(box, ws, r.Scheme)
+	}); err != nil {
+		return false, "", "", err
+	}
+	if !isReady(ws.Status.Conditions, ws.Generation) {
+		return false, "WaitingForWorkspace", workspaceMessage(ws), nil
+	}
+
+	worker := &agentv1.AgentWorker{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkerName(id), Namespace: ns}}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, worker, func() error {
+		worker.Labels = mergeLabels(worker.Labels, sessionLabels(id))
+		worker.Spec = agentv1.AgentWorkerSpec{
+			AgentSessionID:      id,
+			AgentWorkerTemplate: *box.Spec.Worker.DeepCopy(),
+		}
+		return controllerutil.SetControllerReference(box, worker, r.Scheme)
+	}); err != nil {
+		return false, "", "", err
+	}
+	return true, "Provisioned", "namespace, workspace and worker are in place", nil
+}
+
+func workspaceMessage(ws *agentv1.AgentWorkspace) string {
+	if c := meta.FindStatusCondition(ws.Status.Conditions, agentv1.ConditionReady); c != nil && c.Message != "" {
+		return "workspace: " + c.Message
+	}
+	return "workspace is not ready"
 }
 
 func (r *AgentBoxReconciler) reconcileResources(ctx context.Context, box *agentv1.AgentBox) error {
@@ -143,6 +195,8 @@ func (r *AgentBoxReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&agentv1.AgentBox{}).
 		Owns(&corev1.Namespace{}).
+		Owns(&agentv1.AgentWorkspace{}).
+		Owns(&agentv1.AgentWorker{}).
 		Named("agentbox").
 		Complete(r)
 }

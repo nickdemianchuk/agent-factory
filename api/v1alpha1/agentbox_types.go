@@ -17,6 +17,15 @@ type AgentBoxSpec struct {
 	// +optional
 	// +listType=atomic
 	Rules []rbacv1.PolicyRule `json:"rules,omitempty"`
+
+	// Filesystem of the box; provisioned as an AgentWorkspace.
+	// +required
+	Workspace AgentWorkspaceTemplate `json:"workspace"`
+
+	// Agent worker of the box; provisioned as an AgentWorker after the workspace is ready.
+	// +required
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="worker is immutable"
+	Worker AgentWorkerTemplate `json:"worker"`
 }
 
 // AgentBoxStatus is the observed state of an AgentBox.
