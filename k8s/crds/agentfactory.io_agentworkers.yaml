@@ -32,7 +32,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: AgentWorker is an agent worker Pod, child of an AgentBox.
+        description: AgentWorker is an agent worker Pod, owned by an AgentBox.
         properties:
           apiVersion:
             description: |-

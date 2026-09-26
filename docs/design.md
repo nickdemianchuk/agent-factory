@@ -23,7 +23,7 @@ The box is `Ready` once the worker exists. Until then it is `Provisioning` with 
 
 ## Ownership
 
-Workspace and worker are controller-owned by the box, and the box namespace is owned by the box. The `agent-factory-managed-children` admission policy rejects spec changes to them from anyone but the controller. Change the box instead:
+Workspace and worker are controller-owned by the box, and the box namespace is owned by the box. The `agent-factory-box-resources-readonly` admission policy rejects spec changes to them from anyone but the controller. Change the box instead:
 
 - `spec.workspace.size` can grow. The claim is resized only when it is bound and its storage class allows expansion.
 - `spec.worker` is immutable, since a Pod spec cannot change in place.

@@ -78,7 +78,7 @@ type AgentWorkerStatus struct {
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// AgentWorker is an agent worker Pod, child of an AgentBox.
+// AgentWorker is an agent worker Pod, owned by an AgentBox.
 type AgentWorker struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`

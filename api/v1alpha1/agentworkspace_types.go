@@ -64,7 +64,7 @@ type AgentWorkspaceStatus struct {
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// AgentWorkspace is an agent filesystem, child of an AgentBox.
+// AgentWorkspace is an agent filesystem, owned by an AgentBox.
 type AgentWorkspace struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`

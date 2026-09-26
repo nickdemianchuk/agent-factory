@@ -42,7 +42,7 @@ func New(c client.Client) *Factory {
 // NewSessionID returns a new session ID.
 func NewSessionID() string { return string(uuid.NewUUID()) }
 
-// Session is a box and its children.
+// Session is a box with its workspace and worker.
 type Session struct {
 	ID        string
 	Box       *agentv1.AgentBox
@@ -71,20 +71,20 @@ func (f *Factory) Create(ctx context.Context, sessionID string, spec agentv1.Age
 	}
 
 	var s *Session
-	hasChildren := func(ctx context.Context) (bool, error) {
+	provisioned := func(ctx context.Context) (bool, error) {
 		var err error
 		if s, err = f.Get(ctx, sessionID); err != nil {
 			return false, err
 		}
 		return s.Workspace != nil && s.Worker != nil, nil
 	}
-	if err := wait.PollUntilContextTimeout(ctx, f.PollInterval, f.ReadyTimeout, true, hasChildren); err != nil {
-		return nil, fmt.Errorf("wait for children: %w", err)
+	if err := wait.PollUntilContextTimeout(ctx, f.PollInterval, f.ReadyTimeout, true, provisioned); err != nil {
+		return nil, fmt.Errorf("wait for workspace and worker: %w", err)
 	}
 	return s, nil
 }
 
-// Get returns nil for children that do not exist yet.
+// Get returns a nil workspace or worker that does not exist yet.
 func (f *Factory) Get(ctx context.Context, sessionID string) (*Session, error) {
 	box := &agentv1.AgentBox{}
 	if err := f.client.Get(ctx, client.ObjectKey{Name: agentv1.BoxName(sessionID)}, box); err != nil {
@@ -159,7 +159,7 @@ func (f *Factory) UpdateWorkspace(
 	return f.UpdateBox(ctx, sessionID, func(sp *agentv1.AgentBoxSpec) { mutate(&sp.Workspace) })
 }
 
-// Delete removes a session and, with its box, every child.
+// Delete removes a session by deleting its box, which removes the workspace and worker.
 func (f *Factory) Delete(ctx context.Context, sessionID string) error {
 	box := &agentv1.AgentBox{ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(sessionID)}}
 	if err := f.client.Delete(ctx, box); err != nil {

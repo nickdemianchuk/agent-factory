@@ -1,7 +1,7 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
-  name: agent-factory-managed-children
+  name: agent-factory-box-resources-readonly
 spec:
   failurePolicy: Fail
   matchConstraints:
@@ -19,7 +19,7 @@ spec:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
-  name: agent-factory-managed-children
+  name: agent-factory-box-resources-readonly
 spec:
-  policyName: agent-factory-managed-children
+  policyName: agent-factory-box-resources-readonly
   validationActions: ["Deny"]

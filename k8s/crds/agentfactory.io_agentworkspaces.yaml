@@ -32,7 +32,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: AgentWorkspace is an agent filesystem, child of an AgentBox.
+        description: AgentWorkspace is an agent filesystem, owned by an AgentBox.
         properties:
           apiVersion:
             description: |-
