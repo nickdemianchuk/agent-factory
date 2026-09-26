@@ -56,7 +56,7 @@ type AgentBoxStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=abox,categories=agentfactory
-// +kubebuilder:printcolumn:name="BoxID",type=string,JSONPath=`.spec.agentBoxID`
+// +kubebuilder:printcolumn:name="Agent Box ID",type=string,JSONPath=`.spec.agentBoxID`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Namespace",type=string,JSONPath=`.status.namespace`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`

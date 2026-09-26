@@ -20,7 +20,7 @@ spec:
   versions:
   - additionalPrinterColumns:
     - jsonPath: .spec.agentBoxID
-      name: BoxID
+      name: Agent Box ID
       type: string
     - jsonPath: .spec.image
       name: Image

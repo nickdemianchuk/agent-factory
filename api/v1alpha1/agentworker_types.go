@@ -73,7 +73,7 @@ type AgentWorkerStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=aworker,categories=agentfactory
-// +kubebuilder:printcolumn:name="BoxID",type=string,JSONPath=`.spec.agentBoxID`
+// +kubebuilder:printcolumn:name="Agent Box ID",type=string,JSONPath=`.spec.agentBoxID`
 // +kubebuilder:printcolumn:name="Image",type=string,JSONPath=`.spec.image`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
