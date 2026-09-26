@@ -1,3 +1,6 @@
 [tools]
 go = "1.27.1"
-
+colima = { version = "0.10.3", os = ["macos"] }
+kubectl = { version = "1.37.1", os = ["macos", "linux"] }
+helm = { version = "4.3.0", os = ["macos", "linux"] }
+docker-cli = { version = "29.8.1", os = ["macos", "linux"] }
