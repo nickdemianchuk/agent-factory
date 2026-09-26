@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -39,8 +39,8 @@ func New(c client.Client) *Factory {
 	return &Factory{client: c, ReadyTimeout: DefaultReadyTimeout, PollInterval: DefaultPollInterval}
 }
 
-// NewSessionID returns a new session ID.
-func NewSessionID() string { return string(uuid.NewUUID()) }
+// NewSessionID returns a new session ID, a time-ordered UUID v7.
+func NewSessionID() string { return uuid.Must(uuid.NewV7()).String() }
 
 // Session is a box with its workspace and worker.
 type Session struct {

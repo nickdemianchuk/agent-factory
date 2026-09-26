@@ -9,7 +9,7 @@ AgentFactory (controller + factory package, not a CRD)
     └── AgentWorker      namespaced   Pod agent-worker-<uuid>, mounts agent-workspace-<uuid>
 ```
 
-`agentSessionID` is immutable and must be a lowercase UUID. All names derive from it (`api/v1alpha1/common.go`).
+`agentSessionID` is immutable and must be a lowercase UUID. The factory generates UUID v7, so names sort by creation time. All names derive from it (`api/v1alpha1/common.go`).
 
 ## Ordering
 
