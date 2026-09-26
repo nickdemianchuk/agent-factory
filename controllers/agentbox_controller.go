@@ -50,18 +50,22 @@ func (r *AgentBoxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if !box.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, r.finalize(ctx, &box)
 	}
+	// Patch instead of Update: a cached read can lag behind our own writes, and a stale
+	// resourceVersion would fail with a conflict.
+	base := box.DeepCopy()
 	if controllerutil.AddFinalizer(&box, agentv1.Finalizer) {
-		if err := r.Update(ctx, &box); err != nil {
+		if err := r.Patch(ctx, &box, client.MergeFrom(base)); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
+	base = box.DeepCopy()
 
 	if err := r.reconcileResources(ctx, &box); err != nil {
 		log.Error(err, "Failed to provision box resources")
 		box.Status.Phase = agentv1.PhaseFailed
 		setReady(&box.Status.Conditions, box.Generation, false, "ProvisionFailed", err.Error())
 		box.Status.ObservedGeneration = box.Generation
-		if uerr := r.Status().Update(ctx, &box); uerr != nil {
+		if uerr := r.Status().Patch(ctx, &box, client.MergeFrom(base)); uerr != nil {
 			log.Error(uerr, "Failed to update status")
 		}
 		return ctrl.Result{}, err
@@ -72,7 +76,7 @@ func (r *AgentBoxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	box.Status.ServiceAccountName = BoxServiceAccount
 	box.Status.ObservedGeneration = box.Generation
 	setReady(&box.Status.Conditions, box.Generation, true, "Provisioned", "namespace and RBAC are in place")
-	return ctrl.Result{}, r.Status().Update(ctx, &box)
+	return ctrl.Result{}, r.Status().Patch(ctx, &box, client.MergeFrom(base))
 }
 
 func (r *AgentBoxReconciler) reconcileResources(ctx context.Context, box *agentv1.AgentBox) error {
@@ -123,8 +127,9 @@ func (r *AgentBoxReconciler) finalize(ctx context.Context, box *agentv1.AgentBox
 	if err := r.Delete(ctx, ns); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
+	base := box.DeepCopy()
 	controllerutil.RemoveFinalizer(box, agentv1.Finalizer)
-	return r.Update(ctx, box)
+	return r.Patch(ctx, box, client.MergeFrom(base))
 }
 
 func mergeLabels(dst, src map[string]string) map[string]string {

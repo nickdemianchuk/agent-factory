@@ -43,6 +43,9 @@ func (r *AgentWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if !worker.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, nil
 	}
+	// Patch instead of Update: a cached read can lag behind our own writes, and a stale
+	// resourceVersion would fail with a conflict.
+	base := worker.DeepCopy()
 
 	id := worker.Spec.AgentSessionID
 	box, err := getBox(ctx, r.Client, id)
@@ -50,28 +53,29 @@ func (r *AgentWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 	if box == nil || !isReady(box.Status.Conditions, box.Generation) || worker.Namespace != box.Status.Namespace {
-		return r.waiting(ctx, &worker, "WaitingForBox", "box is not ready")
+		return r.waiting(ctx, &worker, base, "WaitingForBox", "box is not ready")
 	}
 
 	var ws agentv1.AgentWorkspace
 	key := client.ObjectKey{Namespace: worker.Namespace, Name: agentv1.WorkspaceName(id)}
 	if err := r.Get(ctx, key, &ws); err != nil {
 		if apierrors.IsNotFound(err) {
-			return r.waiting(ctx, &worker, "WaitingForWorkspace", "workspace does not exist")
+			return r.waiting(ctx, &worker, base, "WaitingForWorkspace", "workspace does not exist")
 		}
 		return ctrl.Result{}, err
 	}
 	if !isReady(ws.Status.Conditions, ws.Generation) {
-		return r.waiting(ctx, &worker, "WaitingForWorkspace", "workspace is not ready")
+		return r.waiting(ctx, &worker, base, "WaitingForWorkspace", "workspace is not ready")
 	}
 
 	// Tie the worker to its box so it is garbage collected with it.
 	if err := controllerutil.SetOwnerReference(box, &worker, r.Scheme); err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := r.Update(ctx, &worker); err != nil {
+	if err := r.Patch(ctx, &worker, client.MergeFrom(base)); err != nil {
 		return ctrl.Result{}, err
 	}
+	base = worker.DeepCopy()
 
 	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkerName(id), Namespace: worker.Namespace}}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
@@ -87,7 +91,7 @@ func (r *AgentWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			worker.Status.Phase = agentv1.PhaseFailed
 			setReady(&worker.Status.Conditions, worker.Generation, false, "PodFailed", err.Error())
 			worker.Status.ObservedGeneration = worker.Generation
-			if uerr := r.Status().Update(ctx, &worker); uerr != nil {
+			if uerr := r.Status().Patch(ctx, &worker, client.MergeFrom(base)); uerr != nil {
 				log.Error(uerr, "Failed to update status")
 			}
 			return ctrl.Result{}, err
@@ -111,16 +115,16 @@ func (r *AgentWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		setReady(&worker.Status.Conditions, worker.Generation, false, "PodStarting",
 			"worker pod is "+string(pod.Status.Phase))
 	}
-	return ctrl.Result{}, r.Status().Update(ctx, &worker)
+	return ctrl.Result{}, r.Status().Patch(ctx, &worker, client.MergeFrom(base))
 }
 
 func (r *AgentWorkerReconciler) waiting(
-	ctx context.Context, w *agentv1.AgentWorker, reason, msg string,
+	ctx context.Context, w, base *agentv1.AgentWorker, reason, msg string,
 ) (ctrl.Result, error) {
 	w.Status.Phase = agentv1.PhasePending
 	setReady(&w.Status.Conditions, w.Generation, false, reason, msg)
 	w.Status.ObservedGeneration = w.Generation
-	if err := r.Status().Update(ctx, w); err != nil {
+	if err := r.Status().Patch(ctx, w, client.MergeFrom(base)); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{RequeueAfter: requeueWaiting}, nil

@@ -40,6 +40,9 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if !ws.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, nil
 	}
+	// Patch instead of Update: a cached read can lag behind our own writes, and a stale
+	// resourceVersion would fail with a conflict.
+	base := ws.DeepCopy()
 
 	id := ws.Spec.AgentSessionID
 	box, err := getBox(ctx, r.Client, id)
@@ -50,7 +53,7 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		ws.Status.Phase = agentv1.PhasePending
 		setReady(&ws.Status.Conditions, ws.Generation, false, "WaitingForBox", "box is not ready")
 		ws.Status.ObservedGeneration = ws.Generation
-		if err := r.Status().Update(ctx, &ws); err != nil {
+		if err := r.Status().Patch(ctx, &ws, client.MergeFrom(base)); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{RequeueAfter: requeueWaiting}, nil
@@ -60,9 +63,10 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if err := controllerutil.SetOwnerReference(box, &ws, r.Scheme); err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := r.Update(ctx, &ws); err != nil {
+	if err := r.Patch(ctx, &ws, client.MergeFrom(base)); err != nil {
 		return ctrl.Result{}, err
 	}
+	base = ws.DeepCopy()
 
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkspaceName(id), Namespace: ws.Namespace},
@@ -87,7 +91,7 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		ws.Status.Phase = agentv1.PhaseFailed
 		setReady(&ws.Status.Conditions, ws.Generation, false, "ClaimFailed", err.Error())
 		ws.Status.ObservedGeneration = ws.Generation
-		if uerr := r.Status().Update(ctx, &ws); uerr != nil {
+		if uerr := r.Status().Patch(ctx, &ws, client.MergeFrom(base)); uerr != nil {
 			log.Error(uerr, "Failed to update status")
 		}
 		return ctrl.Result{}, err
@@ -104,7 +108,7 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		ws.Status.Phase = agentv1.PhaseReady
 		setReady(&ws.Status.Conditions, ws.Generation, true, "ClaimCreated", "claim is "+string(pvc.Status.Phase))
 	}
-	return ctrl.Result{}, r.Status().Update(ctx, &ws)
+	return ctrl.Result{}, r.Status().Patch(ctx, &ws, client.MergeFrom(base))
 }
 
 // SetupWithManager registers the reconciler with the manager.
