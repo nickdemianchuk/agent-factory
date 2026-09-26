@@ -1,5 +1,4 @@
 IMG ?= ghcr.io/nickdemianchuk/agent-factory:latest
-YEAR ?= $(shell date +%Y)
 
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -29,7 +28,7 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	"$(CONTROLLER_GEN)" object:headerFile="hack/boilerplate.go.txt",year=$(YEAR) paths="./..."
+	"$(CONTROLLER_GEN)" object paths="./..."
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
