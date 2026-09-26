@@ -55,6 +55,9 @@ func TestBoxProvisionsEverythingInOrder(t *testing.T) {
 	var namespace corev1.Namespace
 	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Name: ns}, &namespace)).To(Succeed())
 	g.Expect(namespace.Labels).To(HaveKeyWithValue(agentv1.SessionIDLabel, id))
+	g.Expect(namespace.Labels).To(HaveKeyWithValue(componentLabel, componentBox))
+	g.Expect(namespace.Labels).To(HaveKeyWithValue(managedByLabel, managedByValue))
+	g.Expect(box.Finalizers).To(ContainElement(agentv1.BoxFinalizer))
 	g.Expect(namespace.OwnerReferences).To(HaveLen(1))
 	g.Expect(namespace.OwnerReferences[0].UID).To(Equal(box.UID))
 
@@ -82,6 +85,7 @@ func TestBoxProvisionsEverythingInOrder(t *testing.T) {
 	var pvc corev1.PersistentVolumeClaim
 	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName(id)}, &pvc)).To(Succeed())
 	g.Expect(pvc.Labels).To(HaveKeyWithValue(agentv1.SessionIDLabel, id))
+	g.Expect(pvc.Labels).To(HaveKeyWithValue(componentLabel, componentWorkspace))
 	g.Expect(pvc.Spec.AccessModes).To(ConsistOf(corev1.ReadWriteOnce))
 
 	var pod corev1.Pod
@@ -91,6 +95,7 @@ func TestBoxProvisionsEverythingInOrder(t *testing.T) {
 	g.Expect(pod.Spec.Volumes[0].PersistentVolumeClaim.ClaimName).To(Equal(agentv1.WorkspaceName(id)))
 	g.Expect(pod.Spec.ServiceAccountName).To(Equal(BoxServiceAccount))
 	g.Expect(pod.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal("/workspace"))
+	g.Expect(pod.Labels).To(HaveKeyWithValue(componentLabel, componentWorker))
 
 	g.Expect(k8sClient.Delete(ctx, box)).To(Succeed())
 	g.Eventually(func() bool {

@@ -72,7 +72,7 @@ type AgentWorkerStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=awk
+// +kubebuilder:resource:shortName=aworker,categories=agentfactory
 // +kubebuilder:printcolumn:name="Session",type=string,JSONPath=`.spec.agentSessionID`
 // +kubebuilder:printcolumn:name="Image",type=string,JSONPath=`.spec.image`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`

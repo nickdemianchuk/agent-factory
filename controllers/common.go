@@ -8,8 +8,22 @@ import (
 	agentv1 "github.com/nickdemianchuk/agent-factory/api/v1alpha1"
 )
 
-func sessionLabels(sessionID string) map[string]string {
-	return map[string]string{agentv1.SessionIDLabel: sessionID}
+const (
+	managedByLabel = "app.kubernetes.io/managed-by"
+	componentLabel = "app.kubernetes.io/component"
+	managedByValue = "agent-factory-controller"
+
+	componentBox       = "box"
+	componentWorkspace = "workspace"
+	componentWorker    = "worker"
+)
+
+func resourceLabels(sessionID, component string) map[string]string {
+	return map[string]string{
+		agentv1.SessionIDLabel: sessionID,
+		managedByLabel:         managedByValue,
+		componentLabel:         component,
+	}
 }
 
 func setReady(conds *[]metav1.Condition, generation int64, ready bool, reason, message string) {

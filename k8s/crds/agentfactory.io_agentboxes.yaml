@@ -8,6 +8,8 @@ metadata:
 spec:
   group: agentfactory.io
   names:
+    categories:
+    - agentfactory
     kind: AgentBox
     listKind: AgentBoxList
     plural: agentboxes

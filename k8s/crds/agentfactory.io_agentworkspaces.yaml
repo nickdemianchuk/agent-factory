@@ -8,11 +8,13 @@ metadata:
 spec:
   group: agentfactory.io
   names:
+    categories:
+    - agentfactory
     kind: AgentWorkspace
     listKind: AgentWorkspaceList
     plural: agentworkspaces
     shortNames:
-    - aws
+    - aworkspace
     singular: agentworkspace
   scope: Namespaced
   versions:

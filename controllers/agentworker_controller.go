@@ -97,7 +97,7 @@ func (r *AgentWorkerReconciler) buildPod(w *agentv1.AgentWorker, serviceAccount 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      agentv1.WorkerName(id),
 			Namespace: w.Namespace,
-			Labels:    sessionLabels(id),
+			Labels:    resourceLabels(id, componentWorker),
 		},
 		Spec: corev1.PodSpec{
 			ServiceAccountName: serviceAccount,

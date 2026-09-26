@@ -99,7 +99,7 @@ func main() {
 		Metrics:                metricsServerOptions,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "agentfactory.io",
+		LeaderElectionID:       "agent-factory-controller",
 	})
 	if err != nil {
 		setupLog.Error(err, "Failed to start controller")

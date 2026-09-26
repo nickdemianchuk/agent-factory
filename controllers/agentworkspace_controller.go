@@ -46,7 +46,7 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkspaceName(id), Namespace: ws.Namespace},
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, pvc, func() error {
-		pvc.Labels = mergeLabels(pvc.Labels, sessionLabels(id))
+		pvc.Labels = mergeLabels(pvc.Labels, resourceLabels(id, componentWorkspace))
 		if pvc.CreationTimestamp.IsZero() {
 			modes := ws.Spec.AccessModes
 			if len(modes) == 0 {

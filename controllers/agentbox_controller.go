@@ -53,7 +53,7 @@ func (r *AgentBoxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 	// Patch, not Update: cached reads can be stale.
 	base := box.DeepCopy()
-	if controllerutil.AddFinalizer(&box, agentv1.Finalizer) {
+	if controllerutil.AddFinalizer(&box, agentv1.BoxFinalizer) {
 		if err := r.Patch(ctx, &box, client.MergeFrom(base)); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -96,7 +96,7 @@ func (r *AgentBoxReconciler) provision(
 	ns := agentv1.BoxName(id)
 	ws := &agentv1.AgentWorkspace{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkspaceName(id), Namespace: ns}}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, ws, func() error {
-		ws.Labels = mergeLabels(ws.Labels, sessionLabels(id))
+		ws.Labels = mergeLabels(ws.Labels, resourceLabels(id, componentWorkspace))
 		ws.Spec = agentv1.AgentWorkspaceSpec{
 			AgentSessionID:         id,
 			AgentWorkspaceTemplate: *box.Spec.Workspace.DeepCopy(),
@@ -111,7 +111,7 @@ func (r *AgentBoxReconciler) provision(
 
 	worker := &agentv1.AgentWorker{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkerName(id), Namespace: ns}}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, worker, func() error {
-		worker.Labels = mergeLabels(worker.Labels, sessionLabels(id))
+		worker.Labels = mergeLabels(worker.Labels, resourceLabels(id, componentWorker))
 		worker.Spec = agentv1.AgentWorkerSpec{
 			AgentSessionID:      id,
 			AgentWorkerTemplate: *box.Spec.Worker.DeepCopy(),
@@ -132,7 +132,7 @@ func workspaceMessage(ws *agentv1.AgentWorkspace) string {
 
 func (r *AgentBoxReconciler) reconcileResources(ctx context.Context, box *agentv1.AgentBox) error {
 	name := agentv1.BoxName(box.Spec.AgentSessionID)
-	labels := sessionLabels(box.Spec.AgentSessionID)
+	labels := resourceLabels(box.Spec.AgentSessionID, componentBox)
 
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, ns, func() error {
@@ -170,7 +170,7 @@ func (r *AgentBoxReconciler) reconcileResources(ctx context.Context, box *agentv
 }
 
 func (r *AgentBoxReconciler) finalize(ctx context.Context, box *agentv1.AgentBox) error {
-	if !controllerutil.ContainsFinalizer(box, agentv1.Finalizer) {
+	if !controllerutil.ContainsFinalizer(box, agentv1.BoxFinalizer) {
 		return nil
 	}
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(box.Spec.AgentSessionID)}}
@@ -178,7 +178,7 @@ func (r *AgentBoxReconciler) finalize(ctx context.Context, box *agentv1.AgentBox
 		return err
 	}
 	base := box.DeepCopy()
-	controllerutil.RemoveFinalizer(box, agentv1.Finalizer)
+	controllerutil.RemoveFinalizer(box, agentv1.BoxFinalizer)
 	return r.Patch(ctx, box, client.MergeFrom(base))
 }
 

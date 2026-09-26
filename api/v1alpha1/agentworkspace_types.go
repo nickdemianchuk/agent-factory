@@ -58,7 +58,7 @@ type AgentWorkspaceStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=aws
+// +kubebuilder:resource:shortName=aworkspace,categories=agentfactory
 // +kubebuilder:printcolumn:name="Session",type=string,JSONPath=`.spec.agentSessionID`
 // +kubebuilder:printcolumn:name="Size",type=string,JSONPath=`.spec.size`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`

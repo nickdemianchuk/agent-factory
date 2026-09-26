@@ -8,11 +8,13 @@ metadata:
 spec:
   group: agentfactory.io
   names:
+    categories:
+    - agentfactory
     kind: AgentWorker
     listKind: AgentWorkerList
     plural: agentworkers
     shortNames:
-    - awk
+    - aworker
     singular: agentworker
   scope: Namespaced
   versions:

@@ -3,8 +3,8 @@ package v1alpha1
 // SessionIDLabel is set on every resource of a session.
 const SessionIDLabel = "agentfactory.io/session-id"
 
-// Finalizer guards cleanup on agent resources.
-const Finalizer = "agentfactory.io/finalizer"
+// BoxFinalizer guards deletion of the box namespace.
+const BoxFinalizer = "agentbox.agentfactory.io/finalizer"
 
 // ConditionReady is the condition type for readiness.
 const ConditionReady = "Ready"

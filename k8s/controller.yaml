@@ -54,6 +54,9 @@ kind: Deployment
 metadata:
   name: agent-factory-controller
   namespace: agent-factory-system
+  labels:
+    app.kubernetes.io/name: agent-factory-controller
+    app.kubernetes.io/part-of: agent-factory
 spec:
   replicas: 1
   selector:
@@ -63,6 +66,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: agent-factory-controller
+        app.kubernetes.io/part-of: agent-factory
     spec:
       serviceAccountName: agent-factory-controller
       securityContext:
