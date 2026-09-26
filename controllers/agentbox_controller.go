@@ -18,13 +18,10 @@ import (
 )
 
 const (
-	// BoxServiceAccount is the service account agents in a box run as.
 	BoxServiceAccount = "agent"
-	// BoxRole is the role granted to the box service account.
-	BoxRole = "agent"
+	BoxRole           = "agent"
 )
 
-// AgentBoxReconciler provisions the namespace and RBAC of an AgentBox.
 type AgentBoxReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -38,7 +35,6 @@ type AgentBoxReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=escalate;bind
 
-// Reconcile drives an AgentBox toward its desired state.
 func (r *AgentBoxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -50,8 +46,7 @@ func (r *AgentBoxReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if !box.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, r.finalize(ctx, &box)
 	}
-	// Patch instead of Update: a cached read can lag behind our own writes, and a stale
-	// resourceVersion would fail with a conflict.
+	// Patch, not Update: cached reads can be stale.
 	base := box.DeepCopy()
 	if controllerutil.AddFinalizer(&box, agentv1.Finalizer) {
 		if err := r.Patch(ctx, &box, client.MergeFrom(base)); err != nil {
@@ -118,7 +113,6 @@ func (r *AgentBoxReconciler) reconcileResources(ctx context.Context, box *agentv
 	return err
 }
 
-// finalize deletes the box namespace, which removes every resource inside it.
 func (r *AgentBoxReconciler) finalize(ctx context.Context, box *agentv1.AgentBox) error {
 	if !controllerutil.ContainsFinalizer(box, agentv1.Finalizer) {
 		return nil
@@ -140,7 +134,6 @@ func mergeLabels(dst, src map[string]string) map[string]string {
 	return dst
 }
 
-// SetupWithManager registers the reconciler with the manager.
 func (r *AgentBoxReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&agentv1.AgentBox{}).

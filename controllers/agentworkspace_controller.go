@@ -15,10 +15,8 @@ import (
 	agentv1 "github.com/nickdemianchuk/agent-factory/api/v1alpha1"
 )
 
-// requeueWaiting is how long a child waits before re-checking its parent.
 const requeueWaiting = 2 * time.Second
 
-// AgentWorkspaceReconciler provisions the PersistentVolumeClaim of an AgentWorkspace.
 type AgentWorkspaceReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -29,7 +27,6 @@ type AgentWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups=agentfactory.io,resources=agentworkspaces/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 
-// Reconcile drives an AgentWorkspace toward its desired state.
 func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -40,8 +37,6 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if !ws.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, nil
 	}
-	// Patch instead of Update: a cached read can lag behind our own writes, and a stale
-	// resourceVersion would fail with a conflict.
 	base := ws.DeepCopy()
 
 	id := ws.Spec.AgentSessionID
@@ -59,7 +54,6 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{RequeueAfter: requeueWaiting}, nil
 	}
 
-	// Tie the workspace to its box so it is garbage collected with it.
 	if err := controllerutil.SetOwnerReference(box, &ws, r.Scheme); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -81,7 +75,7 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			pvc.Spec.AccessModes = modes
 			pvc.Spec.StorageClassName = ws.Spec.StorageClassName
 		}
-		// The rest of a claim's spec is immutable; only growing the request is allowed.
+		// Only the storage request is mutable.
 		if cur, ok := pvc.Spec.Resources.Requests[corev1.ResourceStorage]; !ok || ws.Spec.Size.Cmp(cur) > 0 {
 			pvc.Spec.Resources.Requests = corev1.ResourceList{corev1.ResourceStorage: ws.Spec.Size}
 		}
@@ -97,8 +91,7 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	// A claim with WaitForFirstConsumer binding stays Pending until a worker mounts it,
-	// so the workspace is ready as soon as the claim exists and is not lost.
+	// WaitForFirstConsumer claims stay Pending until mounted; that still counts as ready.
 	ws.Status.ClaimName = pvc.Name
 	ws.Status.ObservedGeneration = ws.Generation
 	if pvc.Status.Phase == corev1.ClaimLost {
@@ -111,7 +104,6 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, r.Status().Patch(ctx, &ws, client.MergeFrom(base))
 }
 
-// SetupWithManager registers the reconciler with the manager.
 func (r *AgentWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&agentv1.AgentWorkspace{}).

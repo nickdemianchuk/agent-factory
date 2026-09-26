@@ -5,8 +5,7 @@ import (
 	"flag"
 	"os"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
+	// Register client auth plugins.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -64,12 +63,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	// if the enable-http2 flag is false (the default), http/2 should be disabled
-	// due to its vulnerabilities. More specifically, disabling http/2 will
-	// prevent from being vulnerable to the HTTP/2 Stream Cancellation and
-	// Rapid Reset CVEs. For more information see:
-	// - https://github.com/advisories/GHSA-qppj-fm5r-hxr3
-	// - https://github.com/advisories/GHSA-4374-p667-p6c8
+	// HTTP/2 is off by default (Rapid Reset CVEs).
 	disableHTTP2 := func(c *tls.Config) {
 		setupLog.Info("Disabling HTTP/2")
 		c.NextProtos = []string{"http/1.1"}
@@ -86,11 +80,10 @@ func main() {
 	}
 
 	if secureMetrics {
-		// Protect the metrics endpoint with authn/authz.
 		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
 	}
 
-	// Without a certificate, controller-runtime generates a self-signed one, which is fine for development only.
+	// Without certs, a self-signed one is generated (dev only).
 	if len(metricsCertPath) > 0 {
 		setupLog.Info("Initializing metrics certificate watcher using provided certificates",
 			"metrics-cert-path", metricsCertPath, "metrics-cert-name", metricsCertName, "metrics-cert-key", metricsCertKey)

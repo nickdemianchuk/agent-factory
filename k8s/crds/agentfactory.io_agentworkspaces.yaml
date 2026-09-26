@@ -32,7 +32,6 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: AgentWorkspace is the filesystem of an agent, a child of an AgentBox.
         properties:
           apiVersion:
             description: |-
@@ -52,12 +51,9 @@ spec:
           metadata:
             type: object
           spec:
-            description: AgentWorkspaceSpec defines the desired state of an agent
-              filesystem.
             properties:
               accessModes:
-                description: AccessModes are the access modes of the backing volume.
-                  Defaults to ReadWriteOnce.
+                description: Defaults to ReadWriteOnce.
                 items:
                   type: string
                 type: array
@@ -66,8 +62,6 @@ spec:
                 - message: accessModes is immutable
                   rule: self == oldSelf
               agentSessionID:
-                description: AgentSessionID is the session this workspace belongs
-                  to.
                 pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
                 type: string
                 x-kubernetes-validations:
@@ -77,12 +71,10 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Size is the requested storage capacity. It can only grow.
+                description: Can only grow.
                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                 x-kubernetes-int-or-string: true
               storageClassName:
-                description: StorageClassName is the storage class of the backing
-                  volume.
                 type: string
                 x-kubernetes-validations:
                 - message: storageClassName is immutable
@@ -92,13 +84,10 @@ spec:
             - size
             type: object
           status:
-            description: AgentWorkspaceStatus defines the observed state of an AgentWorkspace.
             properties:
               claimName:
-                description: ClaimName is the name of the backing PersistentVolumeClaim.
                 type: string
               conditions:
-                description: Conditions represent the latest observations of the workspace.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -158,11 +147,9 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               observedGeneration:
-                description: ObservedGeneration is the last generation reconciled.
                 format: int64
                 type: integer
               phase:
-                description: Phase is the coarse lifecycle state of the workspace.
                 enum:
                 - Pending
                 - Provisioning

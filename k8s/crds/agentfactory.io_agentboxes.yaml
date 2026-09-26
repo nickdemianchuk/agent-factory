@@ -32,8 +32,6 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: AgentBox is an isolated agent runtime and the parent of all other
-          agent resources.
         properties:
           apiVersion:
             description: |-
@@ -53,20 +51,15 @@ spec:
           metadata:
             type: object
           spec:
-            description: AgentBoxSpec defines the desired state of an isolated agent
-              runtime.
             properties:
               agentSessionID:
-                description: AgentSessionID is the fixed identifier shared by every
-                  resource in the box.
                 pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
                 type: string
                 x-kubernetes-validations:
                 - message: agentSessionID is immutable
                   rule: self == oldSelf
               rules:
-                description: Rules are the RBAC rules granted to the box's agent inside
-                  its namespace.
+                description: RBAC rules for the box agent.
                 items:
                   description: |-
                     PolicyRule holds information that describes a policy rule, but does not contain information
@@ -120,10 +113,8 @@ spec:
             - agentSessionID
             type: object
           status:
-            description: AgentBoxStatus defines the observed state of an AgentBox.
             properties:
               conditions:
-                description: Conditions represent the latest observations of the box.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -183,14 +174,11 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               namespace:
-                description: Namespace is the namespace provisioned for the box.
                 type: string
               observedGeneration:
-                description: ObservedGeneration is the last generation reconciled.
                 format: int64
                 type: integer
               phase:
-                description: Phase is the coarse lifecycle state of the box.
                 enum:
                 - Pending
                 - Provisioning
@@ -200,8 +188,6 @@ spec:
                 - Failed
                 type: string
               serviceAccountName:
-                description: ServiceAccountName is the service account agents in the
-                  box run as.
                 type: string
             type: object
         required:

@@ -21,7 +21,6 @@ const (
 	defaultMountPath = "/workspace"
 )
 
-// AgentWorkerReconciler provisions the Pod of an AgentWorker.
 type AgentWorkerReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -32,7 +31,6 @@ type AgentWorkerReconciler struct {
 // +kubebuilder:rbac:groups=agentfactory.io,resources=agentworkers/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch;delete
 
-// Reconcile drives an AgentWorker toward its desired state.
 func (r *AgentWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -43,8 +41,6 @@ func (r *AgentWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if !worker.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, nil
 	}
-	// Patch instead of Update: a cached read can lag behind our own writes, and a stale
-	// resourceVersion would fail with a conflict.
 	base := worker.DeepCopy()
 
 	id := worker.Spec.AgentSessionID
@@ -68,7 +64,6 @@ func (r *AgentWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return r.waiting(ctx, &worker, base, "WaitingForWorkspace", "workspace is not ready")
 	}
 
-	// Tie the worker to its box so it is garbage collected with it.
 	if err := controllerutil.SetOwnerReference(box, &worker, r.Scheme); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -166,7 +161,6 @@ func (r *AgentWorkerReconciler) buildPod(w *agentv1.AgentWorker, serviceAccount 
 	}
 }
 
-// SetupWithManager registers the reconciler with the manager.
 func (r *AgentWorkerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&agentv1.AgentWorker{}).

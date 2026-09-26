@@ -56,7 +56,6 @@ func TestBoxProvisionsNamespaceAndRBAC(t *testing.T) {
 	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: "box-" + id, Name: BoxRole}, &binding)).To(Succeed())
 	g.Expect(binding.Subjects[0].Name).To(Equal(BoxServiceAccount))
 
-	// Deleting the box deletes its namespace and releases the finalizer.
 	g.Expect(k8sClient.Delete(ctx, box)).To(Succeed())
 	g.Eventually(func() bool {
 		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(box), box)
@@ -72,8 +71,6 @@ func TestWorkspaceAndWorkerWaitForBoxThenProvision(t *testing.T) {
 	id := string(uuid.NewUUID())
 	ns := "box-" + id
 
-	// Children created before their box (and namespace) exist is not possible,
-	// so create the box first and confirm the children reach Ready in order.
 	box := &agentv1.AgentBox{
 		ObjectMeta: metav1.ObjectMeta{Name: agentv1.BoxName(id)},
 		Spec:       agentv1.AgentBoxSpec{AgentSessionID: id},
@@ -90,7 +87,6 @@ func TestWorkspaceAndWorkerWaitForBoxThenProvision(t *testing.T) {
 	}
 	g.Expect(k8sClient.Create(ctx, worker)).To(Succeed())
 
-	// No workspace yet: the worker must wait and create no pod.
 	g.Eventually(func() string {
 		_ = k8sClient.Get(ctx, client.ObjectKeyFromObject(worker), worker)
 		for _, c := range worker.Status.Conditions {
@@ -120,7 +116,6 @@ func TestWorkspaceAndWorkerWaitForBoxThenProvision(t *testing.T) {
 	g.Expect(pvc.Labels).To(HaveKeyWithValue(agentv1.SessionIDLabel, id))
 	g.Expect(pvc.Spec.AccessModes).To(ConsistOf(corev1.ReadWriteOnce))
 
-	// Workspace ready: the worker pod appears and mounts the workspace claim.
 	g.Eventually(func() error {
 		return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName(id)}, &pod)
 	}, timeout, interval).Should(Succeed())

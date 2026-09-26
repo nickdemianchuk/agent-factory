@@ -77,11 +77,9 @@ func TestSessionLifecycle(t *testing.T) {
 	g.Expect(s.Workspace.Name).To(Equal("workspace-" + s.ID))
 	g.Expect(s.Worker.Name).To(Equal("worker-" + s.ID))
 	g.Expect(s.Workspace.Namespace).To(Equal("box-" + s.ID))
-	// Ordering: the workspace was ready before the worker was created.
 	g.Expect(s.Workspace.Status.Phase).To(Equal(agentv1.PhaseReady))
 	g.Expect(s.Worker.CreationTimestamp.Time).To(BeTemporally(">=", s.Workspace.CreationTimestamp.Time))
 
-	// The client reads from a cache, so allow it to observe the new worker.
 	var got *Session
 	g.Eventually(func() *agentv1.AgentWorker {
 		got, err = testFactory.Get(ctx, s.ID)
