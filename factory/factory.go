@@ -100,14 +100,14 @@ func (f *Factory) Get(ctx context.Context, sessionID string) (*Session, error) {
 	}
 
 	ws := &agentv1.AgentWorkspace{}
-	switch err := f.client.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName(sessionID)}, ws); {
+	switch err := f.client.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName}, ws); {
 	case err == nil:
 		s.Workspace = ws
 	case !apierrors.IsNotFound(err):
 		return nil, err
 	}
 	worker := &agentv1.AgentWorker{}
-	switch err := f.client.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName(sessionID)}, worker); {
+	switch err := f.client.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName}, worker); {
 	case err == nil:
 		s.Worker = worker
 	case !apierrors.IsNotFound(err):

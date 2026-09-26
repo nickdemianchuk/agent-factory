@@ -43,7 +43,7 @@ func (r *AgentWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	id := ws.Spec.AgentSessionID
 	pvc := &corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkspaceName(id), Namespace: ws.Namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkspaceName, Namespace: ws.Namespace},
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, pvc, func() error {
 		pvc.Labels = mergeLabels(pvc.Labels, resourceLabels(id, componentWorkspace))

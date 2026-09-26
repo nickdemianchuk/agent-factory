@@ -5,11 +5,11 @@
 ```
 AgentFactory (controller + factory package, not a CRD)
 └── AgentBox         cluster-scoped   Namespace agent-box-<uuid>, ServiceAccount, Role, RoleBinding
-    ├── AgentWorkspace   namespaced   PVC agent-workspace-<uuid>
-    └── AgentWorker      namespaced   Pod agent-worker-<uuid>, mounts agent-workspace-<uuid>
+    ├── AgentWorkspace   namespaced   PVC agent-workspace
+    └── AgentWorker      namespaced   Pod agent-worker, mounts agent-workspace
 ```
 
-`agentSessionID` is immutable and must be a lowercase UUID. The factory generates UUID v7, so names sort by creation time. All names derive from it (`api/v1alpha1/common.go`).
+`agentSessionID` is immutable and must be a lowercase UUID. The factory generates UUID v7, so names sort by creation time. The box and its namespace are named from it (`agent-box-<uuid>`); the workspace and worker have fixed names inside that namespace (`api/v1alpha1/common.go`). Every resource also carries it in the `agentfactory.io/session-id` label.
 
 ## Ordering
 

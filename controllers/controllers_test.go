@@ -69,30 +69,30 @@ func TestBoxProvisionsEverythingInOrder(t *testing.T) {
 	g.Expect(binding.Subjects[0].Name).To(Equal(BoxServiceAccount))
 
 	var ws agentv1.AgentWorkspace
-	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName(id)}, &ws)).To(Succeed())
+	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName}, &ws)).To(Succeed())
 	g.Expect(ws.OwnerReferences).To(HaveLen(1))
 	g.Expect(ws.OwnerReferences[0].UID).To(Equal(box.UID))
 	g.Expect(ws.Spec.AgentSessionID).To(Equal(id))
 	g.Expect(ws.Spec.Size.String()).To(Equal("1Gi"))
 
 	var worker agentv1.AgentWorker
-	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName(id)}, &worker)).To(Succeed())
+	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName}, &worker)).To(Succeed())
 	g.Expect(worker.OwnerReferences).To(HaveLen(1))
 	g.Expect(worker.OwnerReferences[0].UID).To(Equal(box.UID))
 	g.Expect(worker.Spec.Image).To(Equal("busybox"))
 	g.Expect(worker.Spec.WorkspaceMountPath).To(Equal("/workspace"))
 
 	var pvc corev1.PersistentVolumeClaim
-	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName(id)}, &pvc)).To(Succeed())
+	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName}, &pvc)).To(Succeed())
 	g.Expect(pvc.Labels).To(HaveKeyWithValue(agentv1.SessionIDLabel, id))
 	g.Expect(pvc.Labels).To(HaveKeyWithValue(componentLabel, componentWorkspace))
 	g.Expect(pvc.Spec.AccessModes).To(ConsistOf(corev1.ReadWriteOnce))
 
 	var pod corev1.Pod
 	g.Eventually(func() error {
-		return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName(id)}, &pod)
+		return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName}, &pod)
 	}, timeout, interval).Should(Succeed())
-	g.Expect(pod.Spec.Volumes[0].PersistentVolumeClaim.ClaimName).To(Equal(agentv1.WorkspaceName(id)))
+	g.Expect(pod.Spec.Volumes[0].PersistentVolumeClaim.ClaimName).To(Equal(agentv1.WorkspaceName))
 	g.Expect(pod.Spec.ServiceAccountName).To(Equal(BoxServiceAccount))
 	g.Expect(pod.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal("/workspace"))
 	g.Expect(pod.Labels).To(HaveKeyWithValue(componentLabel, componentWorker))
@@ -117,14 +117,14 @@ func TestWorkerWaitsForBoundWorkspace(t *testing.T) {
 
 	var pvc corev1.PersistentVolumeClaim
 	g.Eventually(func() error {
-		return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName(id)}, &pvc)
+		return k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName}, &pvc)
 	}, timeout, interval).Should(Succeed())
 	g.Eventually(func(g Gomega) agentv1.Phase { return boxPhase(g, box) }, timeout, interval).
 		Should(Equal(agentv1.PhaseProvisioning))
 
 	// The claim is unbound, so the worker must not exist yet.
 	worker := &agentv1.AgentWorker{}
-	workerKey := client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName(id)}
+	workerKey := client.ObjectKey{Namespace: ns, Name: agentv1.WorkerName}
 	g.Consistently(func() bool {
 		return client.IgnoreNotFound(k8sClient.Get(ctx, workerKey, worker)) == nil &&
 			k8sClient.Get(ctx, workerKey, worker) != nil
@@ -164,13 +164,13 @@ func TestBoxSpecValidationAndPropagation(t *testing.T) {
 	g.Expect(k8sClient.Update(ctx, box)).To(Succeed())
 	var ws agentv1.AgentWorkspace
 	g.Eventually(func() string {
-		_ = k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName(id)}, &ws)
+		_ = k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName}, &ws)
 		return ws.Spec.Size.String()
 	}, timeout, interval).Should(Equal("2Gi"))
 	g.Eventually(func(g Gomega) agentv1.Phase { return boxPhase(g, box) }, timeout, interval).
 		Should(Equal(agentv1.PhaseReady))
 	var pvc corev1.PersistentVolumeClaim
-	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName(id)}, &pvc)).To(Succeed())
+	g.Expect(k8sClient.Get(ctx, client.ObjectKey{Namespace: ns, Name: agentv1.WorkspaceName}, &pvc)).To(Succeed())
 	g.Expect(pvc.Spec.Resources.Requests.Storage().String()).To(Equal("1Gi"))
 }
 
@@ -184,4 +184,21 @@ func TestBoxRequiresWorkspaceAndWorker(t *testing.T) {
 
 	bad := newBox("not-a-uuid", waitClass)
 	g.Expect(k8sClient.Create(context.Background(), bad)).NotTo(Succeed())
+}
+
+func TestSessionsReuseFixedNamesInSeparateNamespaces(t *testing.T) {
+	g := NewWithT(t)
+	ctx := context.Background()
+
+	ids := []string{string(uuid.NewUUID()), string(uuid.NewUUID())}
+	for _, id := range ids {
+		g.Expect(k8sClient.Create(ctx, newBox(id, waitClass))).To(Succeed())
+	}
+	for _, id := range ids {
+		var pod corev1.Pod
+		key := client.ObjectKey{Namespace: agentv1.BoxName(id), Name: agentv1.WorkerName}
+		g.Eventually(func() error { return k8sClient.Get(ctx, key, &pod) }, timeout, interval).Should(Succeed())
+		g.Expect(pod.Labels).To(HaveKeyWithValue(agentv1.SessionIDLabel, id))
+		g.Expect(pod.Spec.Volumes[0].PersistentVolumeClaim.ClaimName).To(Equal(agentv1.WorkspaceName))
+	}
 }

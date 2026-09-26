@@ -26,8 +26,8 @@ const (
 // BoxName returns the AgentBox and namespace name for a session.
 func BoxName(sessionID string) string { return "agent-box-" + sessionID }
 
-// WorkspaceName returns the AgentWorkspace and PVC name for a session.
-func WorkspaceName(sessionID string) string { return "agent-workspace-" + sessionID }
-
-// WorkerName returns the AgentWorker and Pod name for a session.
-func WorkerName(sessionID string) string { return "agent-worker-" + sessionID }
+// Names of the workspace and worker resources, fixed because their namespace is unique per session.
+const (
+	WorkspaceName = "agent-workspace"
+	WorkerName    = "agent-worker"
+)

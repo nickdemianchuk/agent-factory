@@ -94,7 +94,7 @@ func (r *AgentBoxReconciler) provision(
 
 	id := box.Spec.AgentSessionID
 	ns := agentv1.BoxName(id)
-	ws := &agentv1.AgentWorkspace{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkspaceName(id), Namespace: ns}}
+	ws := &agentv1.AgentWorkspace{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkspaceName, Namespace: ns}}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, ws, func() error {
 		ws.Labels = mergeLabels(ws.Labels, resourceLabels(id, componentWorkspace))
 		ws.Spec = agentv1.AgentWorkspaceSpec{
@@ -109,7 +109,7 @@ func (r *AgentBoxReconciler) provision(
 		return false, "WaitingForWorkspace", workspaceMessage(ws), nil
 	}
 
-	worker := &agentv1.AgentWorker{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkerName(id), Namespace: ns}}
+	worker := &agentv1.AgentWorker{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkerName, Namespace: ns}}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, worker, func() error {
 		worker.Labels = mergeLabels(worker.Labels, resourceLabels(id, componentWorker))
 		worker.Spec = agentv1.AgentWorkerSpec{

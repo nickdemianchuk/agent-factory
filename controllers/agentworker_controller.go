@@ -45,8 +45,7 @@ func (r *AgentWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 	base := worker.DeepCopy()
 
-	id := worker.Spec.AgentSessionID
-	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkerName(id), Namespace: worker.Namespace}}
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: agentv1.WorkerName, Namespace: worker.Namespace}}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(pod), pod); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, err
@@ -95,7 +94,7 @@ func (r *AgentWorkerReconciler) buildPod(w *agentv1.AgentWorker, serviceAccount 
 	}
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      agentv1.WorkerName(id),
+			Name:      agentv1.WorkerName,
 			Namespace: w.Namespace,
 			Labels:    resourceLabels(id, componentWorker),
 		},
@@ -115,7 +114,7 @@ func (r *AgentWorkerReconciler) buildPod(w *agentv1.AgentWorker, serviceAccount 
 				Name: workspaceVolume,
 				VolumeSource: corev1.VolumeSource{
 					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-						ClaimName: agentv1.WorkspaceName(id),
+						ClaimName: agentv1.WorkspaceName,
 					},
 				},
 			}},
