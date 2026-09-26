@@ -1,0 +1,28 @@
+# A full session, applied in dependency order: box, then workspace, then worker.
+# The workspace and worker must live in the box namespace (box-<uuid>), so the
+# factory package is the intended way to create them; these are for manual testing.
+apiVersion: agentfactory.io/v1alpha1
+kind: AgentBox
+metadata:
+  name: box-11111111-1111-4111-8111-111111111111
+spec:
+  agentSessionID: 11111111-1111-4111-8111-111111111111
+---
+apiVersion: agentfactory.io/v1alpha1
+kind: AgentWorkspace
+metadata:
+  name: workspace-11111111-1111-4111-8111-111111111111
+  namespace: box-11111111-1111-4111-8111-111111111111
+spec:
+  agentSessionID: 11111111-1111-4111-8111-111111111111
+  size: 1Gi
+---
+apiVersion: agentfactory.io/v1alpha1
+kind: AgentWorker
+metadata:
+  name: worker-11111111-1111-4111-8111-111111111111
+  namespace: box-11111111-1111-4111-8111-111111111111
+spec:
+  agentSessionID: 11111111-1111-4111-8111-111111111111
+  image: busybox:1.37
+  command: ["sh", "-c", "echo hello > /workspace/hello && sleep 3600"]
