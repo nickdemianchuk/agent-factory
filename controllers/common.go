@@ -13,9 +13,9 @@ const (
 	componentLabel = "app.kubernetes.io/component"
 	managedByValue = "agent-factory-controller"
 
-	componentBox       = "box"
-	componentWorkspace = "workspace"
-	componentWorker    = "worker"
+	componentBox       = "agent-box"
+	componentWorkspace = "agent-workspace"
+	componentWorker    = "agent-worker"
 )
 
 func resourceLabels(sessionID, component string) map[string]string {
