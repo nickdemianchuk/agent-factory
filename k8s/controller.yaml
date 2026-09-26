@@ -6,26 +6,26 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: agent-factory
+  name: agent-factory-controller
   namespace: agent-factory-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: agent-factory
+  name: agent-factory-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: manager-role
+  name: agent-factory-controller
 subjects:
   - kind: ServiceAccount
-    name: agent-factory
+    name: agent-factory-controller
     namespace: agent-factory-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: agent-factory-leader-election
+  name: agent-factory-controller-leader-election
   namespace: agent-factory-system
 rules:
   - apiGroups: ["coordination.k8s.io"]
@@ -38,39 +38,39 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: agent-factory-leader-election
+  name: agent-factory-controller-leader-election
   namespace: agent-factory-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: agent-factory-leader-election
+  name: agent-factory-controller-leader-election
 subjects:
   - kind: ServiceAccount
-    name: agent-factory
+    name: agent-factory-controller
     namespace: agent-factory-system
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: agent-factory
+  name: agent-factory-controller
   namespace: agent-factory-system
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: agent-factory
+      app.kubernetes.io/name: agent-factory-controller
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: agent-factory
+        app.kubernetes.io/name: agent-factory-controller
     spec:
-      serviceAccountName: agent-factory
+      serviceAccountName: agent-factory-controller
       securityContext:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: manager
+        - name: agent-factory-controller
           image: controller
           args:
             - --leader-elect

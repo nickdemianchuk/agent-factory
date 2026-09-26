@@ -12,7 +12,7 @@ spec:
         resources: ["agentworkspaces", "agentworkers"]
   validations:
     - expression: >-
-        request.userInfo.username == 'system:serviceaccount:agent-factory-system:agent-factory' ||
+        request.userInfo.username == 'system:serviceaccount:agent-factory-system:agent-factory-controller' ||
         (request.operation == 'UPDATE' && object.spec == oldObject.spec)
       message: workspaces and workers are managed by their AgentBox; edit the box instead
 ---

@@ -8,5 +8,5 @@ resources:
   - admission-policy.yaml
 images:
   - name: controller
-    newName: ghcr.io/nickdemianchuk/agent-factory
+    newName: ghcr.io/nickdemianchuk/agent-factory-controller
     newTag: latest

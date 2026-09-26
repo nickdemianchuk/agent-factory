@@ -1,4 +1,4 @@
-// Command agent-factory runs the agent resource controllers.
+// Command agent-factory-controller runs the agent resource controllers.
 package main
 
 import (
@@ -46,8 +46,8 @@ func main() {
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
+		"Enable leader election for the controller. "+
+			"Enabling this will ensure there is only one active controller.")
 	flag.BoolVar(&secureMetrics, "metrics-secure", true,
 		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.StringVar(&metricsCertPath, "metrics-cert-path", "",
@@ -102,7 +102,7 @@ func main() {
 		LeaderElectionID:       "agentfactory.io",
 	})
 	if err != nil {
-		setupLog.Error(err, "Failed to start manager")
+		setupLog.Error(err, "Failed to start controller")
 		os.Exit(1)
 	}
 
@@ -126,9 +126,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("Starting manager")
+	setupLog.Info("Starting controller")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "Failed to run manager")
+		setupLog.Error(err, "Failed to run controller")
 		os.Exit(1)
 	}
 }

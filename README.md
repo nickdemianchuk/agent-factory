@@ -27,7 +27,7 @@ The box controller creates the namespace and RBAC, then the workspace, and creat
 
 ## AgentFactory
 
-`AgentFactory` is not a CRD. It is the controller manager (`cmd/agent-factory`) running the three reconcilers, plus the `factory` package, a client with full CRUD over a session:
+`AgentFactory` is not a CRD. It is the controller (`cmd/agent-factory-controller`) running the three reconcilers, plus the `factory` package, a client with full CRUD over a session:
 
 ```go
 f := factory.New(c)

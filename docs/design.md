@@ -3,7 +3,7 @@
 ## Resources
 
 ```
-AgentFactory (controller manager + factory package, not a CRD)
+AgentFactory (controller + factory package, not a CRD)
 └── AgentBox         cluster-scoped   Namespace box-<uuid>, ServiceAccount, Role, RoleBinding
     ├── AgentWorkspace   namespaced   PVC workspace-<uuid>
     └── AgentWorker      namespaced   Pod worker-<uuid>, mounts workspace-<uuid>

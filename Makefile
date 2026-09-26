@@ -1,4 +1,4 @@
-IMG ?= ghcr.io/nickdemianchuk/agent-factory:latest
+IMG ?= ghcr.io/nickdemianchuk/agent-factory-controller:latest
 
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -24,7 +24,7 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	"$(CONTROLLER_GEN)" rbac:roleName=manager-role crd paths="./..." output:crd:artifacts:config=k8s/crds output:rbac:artifacts:config=k8s && mv k8s/role.yaml k8s/rbac.generated.yaml
+	"$(CONTROLLER_GEN)" rbac:roleName=agent-factory-controller crd paths="./..." output:crd:artifacts:config=k8s/crds output:rbac:artifacts:config=k8s && mv k8s/role.yaml k8s/rbac.generated.yaml
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -57,24 +57,24 @@ lint-config: golangci-lint ## Verify golangci-lint linter configuration
 ##@ Build
 
 .PHONY: build
-build: manifests generate fmt vet ## Build manager binary.
-	go build -o bin/manager ./cmd/agent-factory
+build: manifests generate fmt vet ## Build the controller binary.
+	go build -o bin/agent-factory-controller ./cmd/agent-factory-controller
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./cmd/agent-factory
+	go run ./cmd/agent-factory-controller
 
 .PHONY: docker-build
-docker-build: ## Build docker image with the manager.
+docker-build: ## Build docker image with the controller.
 	$(CONTAINER_TOOL) build $(if $(BASE_IMAGE),--build-arg BASE_IMAGE=$(BASE_IMAGE)) -t ${IMG} .
 
 .PHONY: docker-push
-docker-push: ## Push docker image with the manager.
+docker-push: ## Push docker image with the controller.
 	$(CONTAINER_TOOL) push ${IMG}
 
 PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 .PHONY: docker-buildx
-docker-buildx: ## Build and push docker image for the manager for cross-platform support
+docker-buildx: ## Build and push docker image for the controller for cross-platform support
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- $(CONTAINER_TOOL) buildx create --name agent-factory-builder
 	$(CONTAINER_TOOL) buildx use agent-factory-builder
