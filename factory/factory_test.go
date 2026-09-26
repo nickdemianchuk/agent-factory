@@ -96,10 +96,10 @@ func TestSessionLifecycle(t *testing.T) {
 
 	s, err := testFactory.Create(ctx, "", testSpec())
 	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(s.Box.Name).To(Equal("box-" + s.ID))
-	g.Expect(s.Workspace.Name).To(Equal("workspace-" + s.ID))
-	g.Expect(s.Worker.Name).To(Equal("worker-" + s.ID))
-	g.Expect(s.Workspace.Namespace).To(Equal("box-" + s.ID))
+	g.Expect(s.Box.Name).To(Equal("agent-box-" + s.ID))
+	g.Expect(s.Workspace.Name).To(Equal("agent-workspace-" + s.ID))
+	g.Expect(s.Worker.Name).To(Equal("agent-worker-" + s.ID))
+	g.Expect(s.Workspace.Namespace).To(Equal("agent-box-" + s.ID))
 	g.Expect(s.Box.Status.Phase).To(Equal(agentv1.PhaseReady))
 	g.Expect(s.Worker.CreationTimestamp.Time).To(BeTemporally(">=", s.Workspace.CreationTimestamp.Time))
 

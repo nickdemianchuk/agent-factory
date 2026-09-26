@@ -6,15 +6,15 @@ Each agent session is one `AgentBox`. Its spec carries the workspace and worker 
 
 | Kind | Scope | Role | Kubernetes resources | Name |
 | --- | --- | --- | --- | --- |
-| `AgentBox` | cluster | isolated agent runtime, parent of the others | Namespace, ServiceAccount, Role, RoleBinding | `box-<uuid>` |
-| `AgentWorkspace` | box namespace | agent filesystem, created and owned by the box | PersistentVolumeClaim | `workspace-<uuid>` |
-| `AgentWorker` | box namespace | agent worker, created and owned by the box | Pod mounting `workspace-<uuid>` | `worker-<uuid>` |
+| `AgentBox` | cluster | isolated agent runtime, parent of the others | Namespace, ServiceAccount, Role, RoleBinding | `agent-box-<uuid>` |
+| `AgentWorkspace` | box namespace | agent filesystem, created and owned by the box | PersistentVolumeClaim | `agent-workspace-<uuid>` |
+| `AgentWorker` | box namespace | agent worker, created and owned by the box | Pod mounting `agent-workspace-<uuid>` | `agent-worker-<uuid>` |
 
 ```yaml
 apiVersion: agentfactory.io/v1alpha1
 kind: AgentBox
 metadata:
-  name: box-11111111-1111-4111-8111-111111111111
+  name: agent-box-11111111-1111-4111-8111-111111111111
 spec:
   agentSessionID: 11111111-1111-4111-8111-111111111111
   workspace:

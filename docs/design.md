@@ -4,9 +4,9 @@
 
 ```
 AgentFactory (controller + factory package, not a CRD)
-└── AgentBox         cluster-scoped   Namespace box-<uuid>, ServiceAccount, Role, RoleBinding
-    ├── AgentWorkspace   namespaced   PVC workspace-<uuid>
-    └── AgentWorker      namespaced   Pod worker-<uuid>, mounts workspace-<uuid>
+└── AgentBox         cluster-scoped   Namespace agent-box-<uuid>, ServiceAccount, Role, RoleBinding
+    ├── AgentWorkspace   namespaced   PVC agent-workspace-<uuid>
+    └── AgentWorker      namespaced   Pod agent-worker-<uuid>, mounts agent-workspace-<uuid>
 ```
 
 `agentSessionID` is immutable and must be a lowercase UUID. All names derive from it (`api/v1alpha1/common.go`).
