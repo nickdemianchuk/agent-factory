@@ -12,14 +12,14 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
-    uses: nickdemianchuk/actions/.github/workflows/release.yml@main
+    uses: nickdemianchuk/actions/.github/workflows/release.yml@0.7.0
     secrets:
       APP_CLIENT_ID: ${{ vars.OCTO_BUDDY_CLIENT_ID }}
       APP_PRIVATE_KEY: ${{ secrets.OCTO_BUDDY_PRIVATE_KEY }}
 
   image:
     if: github.ref_type == 'tag'
-    runs-on: ubuntu-26.04
+    runs-on: ${{ vars.ACTIONS_RUNNER }}
     permissions:
       contents: write
       packages: write
@@ -45,4 +45,5 @@ jobs:
       - name: Publish CRD manifests to the GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${{ github.ref_name }}" k8s/crds/agentfactory.io_*.yaml --clobber
+          REF_NAME: ${{ github.ref_name }}
+        run: gh release upload "$REF_NAME" k8s/crds/agentfactory.io_*.yaml --clobber

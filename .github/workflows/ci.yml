@@ -10,14 +10,14 @@ on:
 jobs:
   lint-pr:
     if: github.event_name == 'pull_request'
-    uses: nickdemianchuk/actions/.github/workflows/lint-pr.yml@main
+    uses: nickdemianchuk/actions/.github/workflows/lint-pr.yml@0.7.0
 
   lint-commits:
     if: github.event_name == 'push'
-    uses: nickdemianchuk/actions/.github/workflows/lint-commits.yml@main
+    uses: nickdemianchuk/actions/.github/workflows/lint-commits.yml@0.7.0
 
   test:
-    runs-on: ubuntu-26.04
+    runs-on: ${{ vars.ACTIONS_RUNNER }}
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-go@v7.0.0
