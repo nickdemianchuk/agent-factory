@@ -10,11 +10,11 @@ on:
 jobs:
   lint-pr:
     if: github.event_name == 'pull_request'
-    uses: nickdemianchuk/actions/.github/workflows/lint-pr.yml@0.7.0
+    uses: nickdemianchuk/actions/.github/workflows/lint-pr.yml@main
 
   lint-commits:
     if: github.event_name == 'push'
-    uses: nickdemianchuk/actions/.github/workflows/lint-commits.yml@0.7.0
+    uses: nickdemianchuk/actions/.github/workflows/lint-commits.yml@main
 
   test:
     runs-on: ${{ vars.ACTIONS_RUNNER }}
